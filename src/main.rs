@@ -1,6 +1,4 @@
-mod cpu;
-
-use crate::cpu::Cpu;
+use inv8080rs::Cpu;
 
 fn main() {
     let program = std::fs::read("roms/invaders.rom").expect("could not read file");
@@ -10,4 +8,6 @@ fn main() {
     for _ in 0..size {
         cpu.step();
     }
+
+    println!("Exiting");
 }

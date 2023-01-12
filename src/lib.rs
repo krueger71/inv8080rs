@@ -194,22 +194,47 @@ pub enum Condition {
     Minus = 0b111,
 }
 
-pub const MEMORY_SIZE: usize = 8192;
+/// Flags
+#[derive(Copy, Clone, Debug)]
+#[repr(usize)]
+pub enum Flag {
+    Z = 0,
+    S = 1,
+    P = 2,
+    CY = 3,
+    AC = 4,
+}
+
+pub const MEMORY_SIZE: usize = 0x4000;
+pub const NREGS: usize = 8;
+pub const NFLAGS: usize = 5;
 
 /// The CPU-model including memory etc.
 pub struct Cpu {
-    /// RAM
+    /// ROM/RAM all writable for now
     pub memory: [u8; MEMORY_SIZE],
     /// Program counter
     pub pc: usize,
+    /// Registers B,C,D,E,H,L and A (accumulator)
+    pub registers: [u8; NREGS],
+    /// Stack pointer
+    pub sp: usize,
+    /// Flags
+    pub flags: [bool; NFLAGS],
 }
 
 impl Cpu {
     pub fn new(program: Vec<u8>) -> Self {
         let mut memory: [u8; MEMORY_SIZE] = [0; MEMORY_SIZE];
-        memory.copy_from_slice(&program);
+        memory[..program.len()].copy_from_slice(&program);
 
-        Cpu { memory, pc: 0 }
+        Cpu {
+            memory,
+            pc: 0,
+            registers: [0; NREGS],
+            sp: 0,
+            flags: [false; NFLAGS],
+        }
     }
 
     /// Fetch, decode and execute one instruction
@@ -224,6 +249,8 @@ impl Cpu {
 
         #[cfg(debug_assertions)]
         eprint!("{:04X} {:02X} {:08b} ", self.pc, op, op);
+
+        self.pc += 1;
 
         // Decoding in the order from the manual
         let instr = match op {
@@ -554,34 +581,215 @@ impl Cpu {
         #[cfg(debug_assertions)]
         eprintln!("{:04X?}", instr);
 
-        self.pc += 1;
-
         instr
     }
 
     /// Fetch a two-byte address from memory and advance program counter
     fn fetch_address(&mut self) -> usize {
-        self.pc += 1;
         let low = self.memory[self.pc] as usize;
         self.pc += 1;
         let high = self.memory[self.pc] as usize;
+        self.pc += 1;
+
         (high << 8) | low
     }
 
     /// Fetch one byte from memory and advance program counter
     fn fetch_byte(&mut self) -> u8 {
+        let ret = self.memory[self.pc];
         self.pc += 1;
-        self.memory[self.pc]
+
+        ret
     }
 
     /// Fetch two bytes from memory and advance program counter
     fn fetch_bytes(&mut self) -> [u8; 2] {
-        self.pc += 1;
         let low = self.memory[self.pc];
         self.pc += 1;
         let high = self.memory[self.pc];
+        self.pc += 1;
+
         [low, high]
     }
 
-    fn execute(&self, _instr: Instruction) {}
+    /// Execute one instruction and return number of cycles taken
+    fn execute(&mut self, instr: Instruction) -> u8 {
+        let cycles = match instr {
+            NoOperation => 1,
+            Jump(addr) => {
+                self.pc = addr;
+                3
+            }
+            LoadRegPairIm(rp, data) => {
+                match rp {
+                    BC | DE | HL => {
+                        let i = (rp as usize) * 2;
+                        self.registers[i] = data[1];
+                        self.registers[i + 1] = data[0];
+                    }
+                    SP => {
+                        let hb: u16 = data[1] as u16;
+                        let lb: u16 = data[0] as u16;
+                        self.sp = ((hb << 8) | lb) as usize;
+                    }
+                }
+                3
+            }
+            MoveIm(r, data) => {
+                self.registers[r as usize] = data;
+                2
+            }
+            Call(addr) => {
+                let pch = ((self.pc & 0xFF00) >> 8) as u8;
+                let pcl = (self.pc & 0x00FF) as u8;
+                self.memory[self.sp - 1] = pch;
+                self.memory[self.sp - 2] = pcl;
+                self.sp -= 2;
+                self.pc = addr;
+                5
+            }
+            LoadAccInd(rp) => {
+                match rp {
+                    BC | DE => {
+                        let i = (rp as usize) * 2;
+                        self.registers[A as usize] = self.memory
+                            [(self.registers[i] as usize) << 8 | (self.registers[i + 1] as usize)];
+                    }
+                    _ => panic!("Invalid instruction {:04X?}", instr),
+                }
+                2
+            }
+            MoveToMem(r) => {
+                let i = (HL as usize) * 2;
+                self.memory[(self.registers[i] as usize) << 8 | (self.registers[i + 1] as usize)] =
+                    self.registers[r as usize];
+                2
+            }
+            IncrementRegPair(rp) => {
+                let i = (rp as usize) * 2;
+                let val =
+                    ((self.registers[i] as usize) << 8 | (self.registers[i + 1] as usize)) + 1;
+                self.registers[i] = ((val & 0xFF00) >> 8) as u8;
+                self.registers[i + 1] = (val & 0x00FF) as u8;
+                1
+            }
+            DecrementMem => {
+                /*let i = (HL as usize) * 2;
+                let _val = self.memory
+                    [(self.registers[i] as usize) << 8 | (self.registers[i + 1] as usize)];
+                //let (r, o) = val.overflowing_sub(1);
+                3*/
+                panic!("Fixme!");
+            }
+            Decrement(r) => {
+                let before = self.registers[r as usize];
+                let (after, carry) = before.overflowing_sub(1);
+                self.set_register(r, before, after, carry);
+                1
+            }
+            _ => panic!("Unimplemented {:04X?}", instr),
+        };
+
+        #[cfg(debug_assertions)]
+        eprintln!(
+            "     pc: {:04X}, sp: {:04X}, reg: {:02X?}, flg: {:?}",
+            self.pc, self.sp, self.registers, self.flags
+        );
+
+        cycles
+    }
+
+    /// Set the register including the flags taking into account any carry and using the before and after values
+    fn set_register(&mut self, r: Register, before: u8, after: u8, carry: bool) {
+        self.registers[r as usize] = after;
+        self.flags[Flag::Z as usize] = after == 0;
+        self.flags[Flag::S as usize] = ((after & 0b1000_0000) >> 7) == 1;
+        self.flags[Flag::P as usize] = (((after & 0b1000_0000) >> 7)
+            + ((after & 0b0100_0000) >> 6)
+            + ((after & 0b0010_0000) >> 5)
+            + ((after & 0b0001_0000) >> 4)
+            + ((after & 0b0000_1000) >> 3)
+            + ((after & 0b0000_0100) >> 2)
+            + ((after & 0b0000_0010) >> 1)
+            + (after & 0b0000_0001))
+            % 2
+            == 0;
+        self.flags[Flag::CY as usize] = carry;
+        self.flags[Flag::AC as usize] =
+            (before & 0b0000_1000 >> 3) == 1 && (after & 0b0001_0000 >> 4) == 1;
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn setup() -> Cpu {
+        Cpu::new(vec![])
+    }
+
+    #[test]
+    fn no_op() {
+        let mut cpu = setup();
+        assert_eq!(1, cpu.execute(NoOperation));
+        assert_eq!(cpu.pc, 0);
+        assert_eq!(cpu.sp, 0);
+        assert_eq!(cpu.registers, [0; NREGS]);
+        assert_eq!(cpu.flags, [false; NFLAGS]);
+    }
+
+    #[test]
+    fn jump() {
+        let mut cpu = setup();
+        assert_eq!(3, cpu.execute(Jump(0xABCD)));
+        assert_eq!(cpu.pc, 0xABCD);
+        assert_eq!(cpu.sp, 0);
+        assert_eq!(cpu.registers, [0; NREGS]);
+        assert_eq!(cpu.flags, [false; NFLAGS]);
+    }
+
+    #[test]
+    fn load_regpair_im() {
+        let mut cpu = setup();
+        assert_eq!(3, cpu.execute(LoadRegPairIm(BC, [0xAB, 0xCD])));
+        assert_eq!(cpu.pc, 0);
+        assert_eq!(cpu.sp, 0);
+        assert_eq!(cpu.registers, [0xCD, 0xAB, 0, 0, 0, 0, 0, 0]);
+        assert_eq!(cpu.flags, [false; NFLAGS]);
+
+        cpu = setup();
+        assert_eq!(3, cpu.execute(LoadRegPairIm(DE, [0xAB, 0xCD])));
+        assert_eq!(cpu.pc, 0);
+        assert_eq!(cpu.sp, 0);
+        assert_eq!(cpu.registers, [0, 0, 0xCD, 0xAB, 0, 0, 0, 0]);
+        assert_eq!(cpu.flags, [false; NFLAGS]);
+
+        cpu = setup();
+        assert_eq!(3, cpu.execute(LoadRegPairIm(HL, [0xAB, 0xCD])));
+        assert_eq!(cpu.pc, 0);
+        assert_eq!(cpu.sp, 0);
+        assert_eq!(cpu.registers, [0, 0, 0, 0, 0xCD, 0xAB, 0, 0]);
+        assert_eq!(cpu.flags, [false; NFLAGS]);
+
+        cpu = setup();
+        assert_eq!(3, cpu.execute(LoadRegPairIm(SP, [0xAB, 0xCD])));
+        assert_eq!(cpu.pc, 0);
+        assert_eq!(cpu.sp, 0xCDAB);
+        assert_eq!(cpu.registers, [0; NREGS]);
+        assert_eq!(cpu.flags, [false; NFLAGS]);
+    }
+
+    #[test]
+    fn move_im() {
+        let mut cpu = setup();
+        let mut v = 42_u8;
+        for r in [B, C, D, E, H, L, A] {
+            cpu.execute(MoveIm(r, v));
+            assert_eq!(cpu.pc, 0);
+            assert_eq!(cpu.sp, 0);
+            assert_eq!(cpu.registers[r as usize], v);
+            assert_eq!(cpu.flags, [false; NFLAGS]);
+            v += 1;
+        }
+    }
 }
