@@ -724,6 +724,7 @@ impl Cpu {
 mod tests {
     use super::*;
 
+    /// Return a Cpu in a default state (zero/unset)
     fn setup() -> Cpu {
         Cpu::new(vec![])
     }
@@ -782,12 +783,76 @@ mod tests {
     #[test]
     fn move_im() {
         let mut cpu = setup();
-        let mut v = 42_u8;
+        let mut v = 42u8;
         for r in [B, C, D, E, H, L, A] {
-            cpu.execute(MoveIm(r, v));
+            assert_eq!(2, cpu.execute(MoveIm(r, v)));
             assert_eq!(cpu.pc, 0);
             assert_eq!(cpu.sp, 0);
             assert_eq!(cpu.registers[r as usize], v);
+            assert_eq!(cpu.flags, [false; NFLAGS]);
+            v += 1;
+        }
+    }
+
+    #[test]
+    fn call() {
+        let mut cpu = setup();
+        cpu.sp = 2;
+        cpu.pc = 0x1234;
+        assert_eq!(5, cpu.execute(Call(0x2345)));
+        assert_eq!(cpu.pc, 0x2345);
+        assert_eq!(cpu.sp, 0);
+        assert_eq!(cpu.memory[cpu.sp + 1], 0x12);
+        assert_eq!(cpu.memory[cpu.sp], 0x34);
+        assert_eq!(cpu.registers, [0; NREGS]);
+        assert_eq!(cpu.flags, [false; NFLAGS]);
+    }
+
+    #[test]
+    fn load_acc_ind() {
+        let mut cpu = setup();
+        cpu.memory[0x1234] = 0x56;
+        cpu.memory[0x2345] = 0x67;
+        cpu.registers[B as usize] = 0x12;
+        cpu.registers[C as usize] = 0x34;
+        assert_eq!(2, cpu.execute(LoadAccInd(BC)));
+        assert_eq!(0x56, cpu.registers[A as usize]);
+        cpu.registers[D as usize] = 0x23;
+        cpu.registers[E as usize] = 0x45;
+        assert_eq!(2, cpu.execute(LoadAccInd(DE)));
+        assert_eq!(0x67, cpu.registers[A as usize]);
+
+        assert_eq!(cpu.pc, 0);
+        assert_eq!(cpu.sp, 0);
+        assert_eq!(cpu.flags, [false; NFLAGS]);
+    }
+
+    #[test]
+    #[should_panic]
+    fn load_acc_ind_hl() {
+        let mut cpu = setup();
+        cpu.execute(LoadAccInd(HL));
+    }
+
+    #[test]
+    #[should_panic]
+    fn load_acc_ind_sp() {
+        let mut cpu = setup();
+        cpu.execute(LoadAccInd(SP));
+    }
+
+    #[test]
+    fn move_to_mem() {
+        let mut cpu = setup();
+        let mut v = 1u8;
+        for r in [B, C, D, E, A] {
+            cpu.registers[H as usize] = 1;
+            cpu.registers[L as usize] = v;
+            cpu.registers[r as usize] = v + 1;
+            assert_eq!(2, cpu.execute(MoveToMem(r)));
+            assert_eq!(cpu.pc, 0);
+            assert_eq!(cpu.sp, 0);
+            assert_eq!(cpu.memory[(0x100usize | v as usize)], v + 1);
             assert_eq!(cpu.flags, [false; NFLAGS]);
             v += 1;
         }
