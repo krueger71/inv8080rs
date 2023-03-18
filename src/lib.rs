@@ -17,7 +17,7 @@ pub enum Instruction {
     /// Move to memory immediate - MVI M, data
     MoveToMemIm(u8),
     /// Load register pair immediate - LXI rp, data16
-    LoadRegPairIm(RegisterPair, [u8; 2]),
+    LoadRegPairIm(RegisterPair, u16),
     /// Load accumulator direct - LDA addr
     LoadAcc(usize),
     /// Store accumulator direct - STA addr
@@ -215,9 +215,9 @@ pub struct Cpu {
     pub memory: [u8; MEMORY_SIZE],
     /// Program counter
     pub pc: usize,
-    /// Registers B,C,D,E,H,L and A (accumulator)
+    /// Registers B,C,D,E,H,L and A (accumulator). Register pairs BC, DE, HL.
     pub registers: [u8; NREGS],
-    /// Stack pointer
+    /// Stack pointer/register pair SP
     pub sp: usize,
     /// Flags
     pub flags: [bool; NFLAGS],
@@ -321,20 +321,20 @@ impl Cpu {
             0b01110_101 => MoveToMem(L),
             0b01110_111 => MoveToMem(A),
 
-            0b00_000_110 => MoveIm(B, self.fetch_byte()),
-            0b00_001_110 => MoveIm(C, self.fetch_byte()),
-            0b00_010_110 => MoveIm(D, self.fetch_byte()),
-            0b00_011_110 => MoveIm(E, self.fetch_byte()),
-            0b00_100_110 => MoveIm(H, self.fetch_byte()),
-            0b00_101_110 => MoveIm(L, self.fetch_byte()),
-            0b00_111_110 => MoveIm(A, self.fetch_byte()),
+            0b00_000_110 => MoveIm(B, self.fetch_data()),
+            0b00_001_110 => MoveIm(C, self.fetch_data()),
+            0b00_010_110 => MoveIm(D, self.fetch_data()),
+            0b00_011_110 => MoveIm(E, self.fetch_data()),
+            0b00_100_110 => MoveIm(H, self.fetch_data()),
+            0b00_101_110 => MoveIm(L, self.fetch_data()),
+            0b00_111_110 => MoveIm(A, self.fetch_data()),
 
-            0b00110110 => MoveToMemIm(self.fetch_byte()),
+            0b00110110 => MoveToMemIm(self.fetch_data()),
 
-            0b00_00_0001 => LoadRegPairIm(BC, self.fetch_bytes()),
-            0b00_01_0001 => LoadRegPairIm(DE, self.fetch_bytes()),
-            0b00_10_0001 => LoadRegPairIm(HL, self.fetch_bytes()),
-            0b00_11_0001 => LoadRegPairIm(SP, self.fetch_bytes()),
+            0b00_00_0001 => LoadRegPairIm(BC, self.fetch_data16()),
+            0b00_01_0001 => LoadRegPairIm(DE, self.fetch_data16()),
+            0b00_10_0001 => LoadRegPairIm(HL, self.fetch_data16()),
+            0b00_11_0001 => LoadRegPairIm(SP, self.fetch_data16()),
 
             0b00111010 => LoadAcc(self.fetch_address()),
 
@@ -363,7 +363,7 @@ impl Cpu {
 
             0b10000110 => AddMem,
 
-            0b11000110 => AddIm(self.fetch_byte()),
+            0b11000110 => AddIm(self.fetch_data()),
 
             0b10001_000 => AddCarry(B),
             0b10001_001 => AddCarry(C),
@@ -375,7 +375,7 @@ impl Cpu {
 
             0b10001110 => AddMemCarry,
 
-            0b11001110 => AddImCarry(self.fetch_byte()),
+            0b11001110 => AddImCarry(self.fetch_data()),
 
             0b10010_000 => Sub(B),
             0b10010_001 => Sub(C),
@@ -387,7 +387,7 @@ impl Cpu {
 
             0b10010110 => SubMem,
 
-            0b11010110 => SubIm(self.fetch_byte()),
+            0b11010110 => SubIm(self.fetch_data()),
 
             0b10011_000 => SubBorrow(B),
             0b10011_001 => SubBorrow(C),
@@ -399,7 +399,7 @@ impl Cpu {
 
             0b10011110 => SubMemBorrow,
 
-            0b11011110 => SubImBorrow(self.fetch_byte()),
+            0b11011110 => SubImBorrow(self.fetch_data()),
 
             0b00_000_100 => Increment(B),
             0b00_001_100 => Increment(C),
@@ -449,7 +449,7 @@ impl Cpu {
 
             0b10100110 => AndMem,
 
-            0b11100110 => AndIm(self.fetch_byte()),
+            0b11100110 => AndIm(self.fetch_data()),
 
             0b10101_000 => Xor(B),
             0b10101_001 => Xor(C),
@@ -461,7 +461,7 @@ impl Cpu {
 
             0b10101110 => XorMem,
 
-            0b11101110 => XorIm(self.fetch_byte()),
+            0b11101110 => XorIm(self.fetch_data()),
 
             0b10110_000 => Or(B),
             0b10110_001 => Or(C),
@@ -473,7 +473,7 @@ impl Cpu {
 
             0b10110110 => OrMem,
 
-            0b11110110 => OrIm(self.fetch_byte()),
+            0b11110110 => OrIm(self.fetch_data()),
 
             0b10111_000 => Cmp(B),
             0b10111_001 => Cmp(C),
@@ -485,7 +485,7 @@ impl Cpu {
 
             0b10111110 => CmpMem,
 
-            0b11111110 => CmpIm(self.fetch_byte()),
+            0b11111110 => CmpIm(self.fetch_data()),
 
             0b00000111 => RotateLeft,
 
@@ -563,9 +563,9 @@ impl Cpu {
 
             0b11111001 => SPfromHL,
 
-            0b11011011 => Input(self.fetch_byte()),
+            0b11011011 => Input(self.fetch_data()),
 
-            0b11010011 => Output(self.fetch_byte()),
+            0b11010011 => Output(self.fetch_data()),
 
             0b11111011 => EnableInterrupts,
 
@@ -584,18 +584,8 @@ impl Cpu {
         instr
     }
 
-    /// Fetch a two-byte address from memory and advance program counter
-    fn fetch_address(&mut self) -> usize {
-        let low = self.memory[self.pc] as usize;
-        self.pc += 1;
-        let high = self.memory[self.pc] as usize;
-        self.pc += 1;
-
-        (high << 8) | low
-    }
-
     /// Fetch one byte from memory and advance program counter
-    fn fetch_byte(&mut self) -> u8 {
+    fn fetch_data(&mut self) -> u8 {
         let ret = self.memory[self.pc];
         self.pc += 1;
 
@@ -603,13 +593,18 @@ impl Cpu {
     }
 
     /// Fetch two bytes from memory and advance program counter
-    fn fetch_bytes(&mut self) -> [u8; 2] {
-        let low = self.memory[self.pc];
+    fn fetch_data16(&mut self) -> u16 {
+        let low = self.memory[self.pc] as u16;
         self.pc += 1;
-        let high = self.memory[self.pc];
+        let high = self.memory[self.pc] as u16;
         self.pc += 1;
 
-        [low, high]
+        (high << 8) | low
+    }
+
+    /// Fetch a two-byte address from memory and advance program counter
+    fn fetch_address(&mut self) -> usize {
+        self.fetch_data16() as usize
     }
 
     /// Execute one instruction and return number of cycles taken
@@ -621,22 +616,11 @@ impl Cpu {
                 3
             }
             LoadRegPairIm(rp, data) => {
-                match rp {
-                    BC | DE | HL => {
-                        let i = (rp as usize) * 2;
-                        self.registers[i] = data[1];
-                        self.registers[i + 1] = data[0];
-                    }
-                    SP => {
-                        let hb: u16 = data[1] as u16;
-                        let lb: u16 = data[0] as u16;
-                        self.sp = ((hb << 8) | lb) as usize;
-                    }
-                }
+                self.set_reg_pair(rp, data);
                 3
             }
             MoveIm(r, data) => {
-                self.registers[r as usize] = data;
+                self.set_reg(r, data);
                 2
             }
             Call(addr) => {
@@ -651,40 +635,25 @@ impl Cpu {
             LoadAccInd(rp) => {
                 match rp {
                     BC | DE => {
-                        let i = (rp as usize) * 2;
-                        self.registers[A as usize] = self.memory
-                            [(self.registers[i] as usize) << 8 | (self.registers[i + 1] as usize)];
+                        self.set_reg(A, self.memory[self.get_reg_pair(rp) as usize]);
                     }
                     _ => panic!("Invalid instruction {:04X?}", instr),
                 }
                 2
             }
             MoveToMem(r) => {
-                let i = (HL as usize) * 2;
-                self.memory[(self.registers[i] as usize) << 8 | (self.registers[i + 1] as usize)] =
-                    self.registers[r as usize];
+                self.memory[self.get_reg_pair(HL) as usize] = self.get_reg(r);
                 2
             }
             IncrementRegPair(rp) => {
-                let i = (rp as usize) * 2;
-                let val =
-                    ((self.registers[i] as usize) << 8 | (self.registers[i + 1] as usize)) + 1;
-                self.registers[i] = ((val & 0xFF00) >> 8) as u8;
-                self.registers[i + 1] = (val & 0x00FF) as u8;
+                self.set_reg_pair(rp, 1 + self.get_reg_pair(rp));
                 1
             }
-            DecrementMem => {
-                /*let i = (HL as usize) * 2;
-                let _val = self.memory
-                    [(self.registers[i] as usize) << 8 | (self.registers[i + 1] as usize)];
-                //let (r, o) = val.overflowing_sub(1);
-                3*/
-                panic!("Fixme!");
-            }
             Decrement(r) => {
-                let before = self.registers[r as usize];
+                let before = self.get_reg(r);
                 let (after, carry) = before.overflowing_sub(1);
-                self.set_register(r, before, after, carry);
+                self.set_reg(r, after);
+                self.set_flags(before, after, carry);
                 1
             }
             _ => panic!("Unimplemented {:04X?}", instr),
@@ -699,9 +668,8 @@ impl Cpu {
         cycles
     }
 
-    /// Set the register including the flags taking into account any carry and using the before and after values
-    fn set_register(&mut self, r: Register, before: u8, after: u8, carry: bool) {
-        self.registers[r as usize] = after;
+    /// Set the flags taking into account carry using the before and after values
+    fn set_flags(&mut self, before: u8, after: u8, carry: bool) {
         self.flags[Flag::Z as usize] = after == 0;
         self.flags[Flag::S as usize] = ((after & 0b1000_0000) >> 7) == 1;
         self.flags[Flag::P as usize] = (((after & 0b1000_0000) >> 7)
@@ -717,6 +685,41 @@ impl Cpu {
         self.flags[Flag::CY as usize] = carry;
         self.flags[Flag::AC as usize] =
             (before & 0b0000_1000 >> 3) == 1 && (after & 0b0001_0000 >> 4) == 1;
+    }
+
+    /// Set register pair
+    fn set_reg_pair(&mut self, rp: RegisterPair, data: u16) {
+        match rp {
+            BC | DE | HL => {
+                let i = (rp as usize) * 2;
+                self.registers[i] = ((data & 0xFF00) >> 8) as u8;
+                self.registers[i + 1] = (data & 0x00FF) as u8;
+            }
+            SP => {
+                self.sp = data as usize;
+            }
+        }
+    }
+
+    /// Get register pair
+    fn get_reg_pair(&self, rp: RegisterPair) -> u16 {
+        match rp {
+            BC | DE | HL => {
+                let i = (rp as usize) * 2;
+                (self.registers[i] as u16) << 8 | self.registers[i + 1] as u16
+            }
+            SP => self.sp as u16,
+        }
+    }
+
+    /// Set register
+    fn set_reg(&mut self, r: Register, data: u8) {
+        self.registers[r as usize] = data;
+    }
+
+    /// Get register
+    fn get_reg(&self, r: Register) -> u8 {
+        self.registers[r as usize]
     }
 }
 
@@ -752,30 +755,30 @@ mod tests {
     #[test]
     fn load_regpair_im() {
         let mut cpu = setup();
-        assert_eq!(3, cpu.execute(LoadRegPairIm(BC, [0xAB, 0xCD])));
+        assert_eq!(3, cpu.execute(LoadRegPairIm(BC, 0xABCD)));
         assert_eq!(cpu.pc, 0);
         assert_eq!(cpu.sp, 0);
-        assert_eq!(cpu.registers, [0xCD, 0xAB, 0, 0, 0, 0, 0, 0]);
+        assert_eq!(cpu.registers, [0xAB, 0xCD, 0, 0, 0, 0, 0, 0]);
         assert_eq!(cpu.flags, [false; NFLAGS]);
 
         cpu = setup();
-        assert_eq!(3, cpu.execute(LoadRegPairIm(DE, [0xAB, 0xCD])));
+        assert_eq!(3, cpu.execute(LoadRegPairIm(DE, 0xABCD)));
         assert_eq!(cpu.pc, 0);
         assert_eq!(cpu.sp, 0);
-        assert_eq!(cpu.registers, [0, 0, 0xCD, 0xAB, 0, 0, 0, 0]);
+        assert_eq!(cpu.registers, [0, 0, 0xAB, 0xCD, 0, 0, 0, 0]);
         assert_eq!(cpu.flags, [false; NFLAGS]);
 
         cpu = setup();
-        assert_eq!(3, cpu.execute(LoadRegPairIm(HL, [0xAB, 0xCD])));
+        assert_eq!(3, cpu.execute(LoadRegPairIm(HL, 0xABCD)));
         assert_eq!(cpu.pc, 0);
         assert_eq!(cpu.sp, 0);
-        assert_eq!(cpu.registers, [0, 0, 0, 0, 0xCD, 0xAB, 0, 0]);
+        assert_eq!(cpu.registers, [0, 0, 0, 0, 0xAB, 0xCD, 0, 0]);
         assert_eq!(cpu.flags, [false; NFLAGS]);
 
         cpu = setup();
-        assert_eq!(3, cpu.execute(LoadRegPairIm(SP, [0xAB, 0xCD])));
+        assert_eq!(3, cpu.execute(LoadRegPairIm(SP, 0xABCD)));
         assert_eq!(cpu.pc, 0);
-        assert_eq!(cpu.sp, 0xCDAB);
+        assert_eq!(cpu.sp, 0xABCD);
         assert_eq!(cpu.registers, [0; NREGS]);
         assert_eq!(cpu.flags, [false; NFLAGS]);
     }
@@ -855,6 +858,53 @@ mod tests {
             assert_eq!(cpu.memory[(0x100usize | v as usize)], v + 1);
             assert_eq!(cpu.flags, [false; NFLAGS]);
             v += 1;
+        }
+    }
+
+    #[test]
+    fn increment_reg_pair() {
+        let mut cpu = setup();
+        for rp in [BC, DE, HL, SP] {
+            cpu.set_reg_pair(rp, 0xFF);
+            assert_eq!(1, cpu.execute(IncrementRegPair(rp)));
+            assert_eq!(0x100, cpu.get_reg_pair(rp));
+        }
+    }
+
+    #[test]
+    fn decrement() {
+        let mut cpu = setup();
+        for r in [B, C, D, E, H, L, A] {
+            cpu.set_reg(r, 1);
+            assert_eq!(1, cpu.execute(Decrement(r)));
+            assert_eq!(0, cpu.get_reg(r));
+            assert_eq!(cpu.flags, [true, false, true, false, false]);
+            assert_eq!(1, cpu.execute(Decrement(r)));
+            assert_eq!(-1, cpu.get_reg(r) as i8);
+            assert_eq!(cpu.flags, [false, true, true, true, false]);
+            assert_eq!(1, cpu.execute(Decrement(r)));
+            assert_eq!(-2, cpu.get_reg(r) as i8);
+            assert_eq!(cpu.flags, [false, true, false, false, false]);
+        }
+    }
+
+    #[test]
+    fn get_and_set_reg_pair() {
+        let mut cpu = setup();
+
+        for rp in [BC, DE, HL, SP] {
+            cpu.set_reg_pair(rp, 0xCAFE);
+            assert_eq!(0xCAFE, cpu.get_reg_pair(rp));
+        }
+    }
+
+    #[test]
+    fn get_and_set_reg() {
+        let mut cpu = setup();
+
+        for r in [B, C, D, E, H, L, A] {
+            cpu.set_reg(r, 0xFE);
+            assert_eq!(0xFE, cpu.get_reg(r));
         }
     }
 }
