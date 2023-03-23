@@ -656,6 +656,12 @@ impl Cpu {
                 self.set_flags(before, after, carry);
                 1
             }
+            JumpCond(c, addr) => {
+                if self.cond(c) {
+                    self.pc = addr;
+                }
+                3
+            }
             _ => panic!("Unimplemented {:04X?}", instr),
         };
 
@@ -720,6 +726,20 @@ impl Cpu {
     /// Get register
     fn get_reg(&self, r: Register) -> u8 {
         self.registers[r as usize]
+    }
+
+    /// Check condition
+    fn cond(&self, c: Condition) -> bool {
+        match c {
+            NotZero => !self.flags[Flag::Z as usize],
+            Zero => self.flags[Flag::Z as usize],
+            NoCarry => !self.flags[Flag::CY as usize],
+            Carry => self.flags[Flag::CY as usize],
+            ParityOdd => !self.flags[Flag::P as usize],
+            ParityEven => self.flags[Flag::P as usize],
+            Plus => !self.flags[Flag::S as usize],
+            Minus => self.flags[Flag::S as usize],
+        }
     }
 }
 
@@ -889,6 +909,29 @@ mod tests {
     }
 
     #[test]
+    fn jumpcond() {
+        let mut cpu = setup();
+        assert_eq!(3, cpu.execute(JumpCond(Condition::NotZero, 0x0001)));
+        assert_eq!(cpu.pc, 0x0001);
+        assert_eq!(3, cpu.execute(JumpCond(Condition::Zero, 0x0002)));
+        assert_eq!(cpu.pc, 0x0001);
+        assert_eq!(3, cpu.execute(JumpCond(Condition::NoCarry, 0x0002)));
+        assert_eq!(cpu.pc, 0x0002);
+        assert_eq!(3, cpu.execute(JumpCond(Condition::Carry, 0x0003)));
+        assert_eq!(cpu.pc, 0x0002);
+        assert_eq!(3, cpu.execute(JumpCond(Condition::ParityOdd, 0x0003)));
+        assert_eq!(cpu.pc, 0x0003);
+        assert_eq!(3, cpu.execute(JumpCond(Condition::ParityEven, 0x0004)));
+        assert_eq!(cpu.pc, 0x0003);
+        assert_eq!(3, cpu.execute(JumpCond(Condition::Plus, 0x0004)));
+        assert_eq!(cpu.pc, 0x0004);
+        assert_eq!(3, cpu.execute(JumpCond(Condition::Minus, 0x0005)));
+        assert_eq!(cpu.pc, 0x0004);
+    }
+
+    // Test helper functions below
+
+    #[test]
     fn get_and_set_reg_pair() {
         let mut cpu = setup();
 
@@ -906,5 +949,19 @@ mod tests {
             cpu.set_reg(r, 0xFE);
             assert_eq!(0xFE, cpu.get_reg(r));
         }
+    }
+
+    #[test]
+    fn cond() {
+        let mut cpu = setup();
+        cpu.flags = [false; NFLAGS];
+        assert!(cpu.cond(Condition::NotZero));
+        assert!(!cpu.cond(Condition::Zero));
+        assert!(cpu.cond(Condition::NoCarry));
+        assert!(!cpu.cond(Condition::Carry));
+        assert!(cpu.cond(Condition::ParityOdd));
+        assert!(!cpu.cond(Condition::ParityEven));
+        assert!(cpu.cond(Condition::Plus));
+        assert!(!cpu.cond(Condition::Minus));
     }
 }
