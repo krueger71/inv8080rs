@@ -624,13 +624,16 @@ impl Cpu {
                 2
             }
             Call(addr) => {
-                let pch = ((self.pc & 0xFF00) >> 8) as u8;
-                let pcl = (self.pc & 0x00FF) as u8;
-                self.memory[self.sp - 1] = pch;
-                self.memory[self.sp - 2] = pcl;
+                self.memory[self.sp - 1] = ((self.pc & 0xFF00) >> 8) as u8;
+                self.memory[self.sp - 2] = (self.pc & 0x00FF) as u8;
                 self.sp -= 2;
                 self.pc = addr;
                 5
+            }
+            Return => {
+                self.pc = (self.memory[self.sp] as usize) | ((self.memory[self.sp + 1] as usize) << 8);
+                self.sp += 2;
+                3
             }
             LoadAccInd(rp) => {
                 match rp {
@@ -829,6 +832,16 @@ mod tests {
         assert_eq!(cpu.memory[cpu.sp], 0x34);
         assert_eq!(cpu.registers, [0; NREGS]);
         assert_eq!(cpu.flags, [false; NFLAGS]);
+    }
+
+    #[test]
+    fn ret() {
+        let mut cpu = setup();
+        cpu.memory[cpu.sp] = 0xAB;
+        cpu.memory[cpu.sp + 1] = 0xCD;
+        assert_eq!(3, cpu.execute(Return));
+        assert_eq!(cpu.pc, 0xCDAB);
+        assert_eq!(cpu.sp, 2);
     }
 
     #[test]
