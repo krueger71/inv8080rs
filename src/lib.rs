@@ -665,6 +665,10 @@ impl Cpu {
                 }
                 3
             }
+            MoveToMemoryImmediate(data) => {
+                self.memory[self.get_reg_pair(HL) as usize] = data;
+                3
+            }
             _ => panic!("Unimplemented {:04X?}", instr),
         };
 
@@ -948,6 +952,12 @@ mod tests {
         assert_eq!(cpu.pc, 0x0004);
     }
 
+    #[test]
+    fn move_to_memory_immediate() {
+        let mut cpu = setup();
+        assert_eq!(3, cpu.execute(MoveToMemoryImmediate(0xFE)));
+        assert_eq!(cpu.memory[0], 0xFE);
+    }
     // Test helper functions below
 
     #[test]
