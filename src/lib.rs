@@ -159,7 +159,6 @@ pub enum Instruction {
 
 /// Register pairs
 #[derive(Copy, Clone, Debug, PartialEq)]
-#[repr(usize)]
 pub enum RegisterPair {
     BC = 0b00,
     DE = 0b01,
@@ -169,7 +168,6 @@ pub enum RegisterPair {
 
 /// Register
 #[derive(Copy, Clone, Debug, PartialEq)]
-#[repr(usize)]
 pub enum Register {
     B = 0b000,
     C = 0b001,
@@ -182,7 +180,6 @@ pub enum Register {
 
 /// Condition
 #[derive(Copy, Clone, Debug, PartialEq)]
-#[repr(usize)]
 pub enum Condition {
     NotZero = 0b000,
     Zero = 0b001,
@@ -196,7 +193,6 @@ pub enum Condition {
 
 /// Flags
 #[derive(Copy, Clone, Debug, PartialEq)]
-#[repr(usize)]
 pub enum Flag {
     Z = 0,
     S = 1,
