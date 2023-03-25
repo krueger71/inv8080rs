@@ -573,9 +573,8 @@ impl Cpu {
 
             0b01110110 => Halt,
 
-            0x0 | 0x8 | 0x10 | 0x18 | 0x20 | 0x28 | 0x30 | 0x38 => NoOperation,
-
-            _ => Err(op),
+            0b00000000 => NoOperation,
+            _ => Err(op), // 12 values unused
         };
 
         #[cfg(debug_assertions)]
