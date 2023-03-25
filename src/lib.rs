@@ -4,7 +4,7 @@ use Register::*;
 use RegisterPair::*;
 
 /// Instructions of the Cpu in the order of Chapter 4 of the manual.
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub enum Instruction {
     /// Move register - MOV r1, r2
     MoveRegister(Register, Register),
@@ -158,7 +158,7 @@ pub enum Instruction {
 }
 
 /// Register pairs
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 #[repr(usize)]
 pub enum RegisterPair {
     BC = 0b00,
@@ -168,7 +168,7 @@ pub enum RegisterPair {
 }
 
 /// Register
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 #[repr(usize)]
 pub enum Register {
     B = 0b000,
@@ -181,7 +181,7 @@ pub enum Register {
 }
 
 /// Condition
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 #[repr(usize)]
 pub enum Condition {
     NotZero = 0b000,
@@ -195,7 +195,7 @@ pub enum Condition {
 }
 
 /// Flags
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 #[repr(usize)]
 pub enum Flag {
     Z = 0,
@@ -669,6 +669,10 @@ impl Cpu {
                 self.memory[self.get_reg_pair(HL) as usize] = data;
                 3
             }
+            MoveRegister(to, from) => {
+                self.set_reg(to, self.get_reg(from));
+                1
+            }
             _ => panic!("Unimplemented {:04X?}", instr),
         };
 
@@ -957,6 +961,23 @@ mod tests {
         let mut cpu = setup();
         assert_eq!(3, cpu.execute(MoveToMemoryImmediate(0xFE)));
         assert_eq!(cpu.memory[0], 0xFE);
+    }
+
+    #[test]
+    fn move_register() {
+        let mut cpu = setup();
+        let mut v = 1;
+        for f in [B, C, D, E, H, L, A] {
+            for t in [B, C, D, E, H, L, A] {
+                cpu.set_reg(f, v);
+                if f != t {
+                    assert_ne!(cpu.get_reg(t), v);
+                }
+                assert_eq!(1, cpu.execute(MoveRegister(t, f)));
+                assert_eq!(cpu.get_reg(t), v);
+            }
+            v += 1;
+        }
     }
     // Test helper functions below
 
