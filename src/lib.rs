@@ -756,7 +756,7 @@ mod tests {
     }
 
     #[test]
-    fn no_op() {
+    fn no_operation() {
         let mut cpu = setup();
         assert_eq!(1, cpu.execute(NoOperation));
         assert_eq!(cpu.pc, 0);
@@ -776,7 +776,7 @@ mod tests {
     }
 
     #[test]
-    fn load_regpair_im() {
+    fn load_register_pair_immediate() {
         let mut cpu = setup();
         assert_eq!(3, cpu.execute(LoadRegisterPairImmediate(BC, 0xABCD)));
         assert_eq!(cpu.pc, 0);
@@ -807,7 +807,7 @@ mod tests {
     }
 
     #[test]
-    fn move_im() {
+    fn move_immediate() {
         let mut cpu = setup();
         let mut v = 42u8;
         for r in [B, C, D, E, H, L, A] {
@@ -845,7 +845,7 @@ mod tests {
     }
 
     #[test]
-    fn load_acc_ind() {
+    fn load_accumulator_indirect() {
         let mut cpu = setup();
         cpu.memory[0x1234] = 0x56;
         cpu.memory[0x2345] = 0x67;
@@ -865,20 +865,20 @@ mod tests {
 
     #[test]
     #[should_panic]
-    fn load_acc_ind_hl() {
+    fn load_accumulator_indirect_hl() {
         let mut cpu = setup();
         cpu.execute(LoadAccumulatorIndirect(HL));
     }
 
     #[test]
     #[should_panic]
-    fn load_acc_ind_sp() {
+    fn load_accumulator_indirect_sp() {
         let mut cpu = setup();
         cpu.execute(LoadAccumulatorIndirect(SP));
     }
 
     #[test]
-    fn move_to_mem() {
+    fn move_to_memory() {
         let mut cpu = setup();
         let mut v = 1u8;
         for r in [B, C, D, E, A] {
@@ -895,7 +895,7 @@ mod tests {
     }
 
     #[test]
-    fn increment_reg_pair() {
+    fn increment_register_pair() {
         let mut cpu = setup();
         for rp in [BC, DE, HL, SP] {
             cpu.set_reg_pair(rp, 0xFF);
@@ -905,7 +905,7 @@ mod tests {
     }
 
     #[test]
-    fn decrement() {
+    fn decrement_register() {
         let mut cpu = setup();
         for r in [B, C, D, E, H, L, A] {
             cpu.set_reg(r, 1);
@@ -922,7 +922,7 @@ mod tests {
     }
 
     #[test]
-    fn jumpcond() {
+    fn conditional_jump() {
         let mut cpu = setup();
         assert_eq!(3, cpu.execute(ConditionalJump(Condition::NotZero, 0x0001)));
         assert_eq!(cpu.pc, 0x0001);
