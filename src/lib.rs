@@ -611,11 +611,11 @@ impl Cpu {
                 3
             }
             LoadRegisterPairImmediate(rp, data) => {
-                self.set_reg_pair(rp, data);
+                self.set_register_pair(rp, data);
                 3
             }
             MoveImmediate(r, data) => {
-                self.set_reg(r, data);
+                self.set_register(r, data);
                 2
             }
             Call(addr) => {
@@ -630,49 +630,49 @@ impl Cpu {
             LoadAccumulatorIndirect(rp) => {
                 match rp {
                     BC | DE => {
-                        self.set_reg(A, self.memory[self.get_reg_pair(rp) as usize]);
+                        self.set_register(A, self.memory[self.get_register_pair(rp) as usize]);
                     }
                     _ => panic!("Invalid instruction {:04X?}", instr),
                 }
                 2
             }
             MoveToMemory(r) => {
-                self.memory[self.get_reg_pair(HL) as usize] = self.get_reg(r);
+                self.memory[self.get_register_pair(HL) as usize] = self.get_register(r);
                 2
             }
             IncrementRegisterPair(rp) => {
-                self.set_reg_pair(rp, 1 + self.get_reg_pair(rp));
+                self.set_register_pair(rp, 1 + self.get_register_pair(rp));
                 1
             }
             DecrementRegister(r) => {
-                let before = self.get_reg(r);
+                let before = self.get_register(r);
                 let (after, carry) = before.overflowing_sub(1);
-                self.set_reg(r, after);
-                self.set_flags(before, after, carry);
+                self.set_register(r, after);
+                self.set_flags_for_aritmethic(before, after, carry);
                 1
             }
             ConditionalJump(c, addr) => {
-                if self.cond(c) {
+                if self.is_condition(c) {
                     self.pc = addr;
                 }
                 3
             }
             MoveToMemoryImmediate(data) => {
-                self.memory[self.get_reg_pair(HL) as usize] = data;
+                self.memory[self.get_register_pair(HL) as usize] = data;
                 3
             }
             MoveRegister(to, from) => {
-                self.set_reg(to, self.get_reg(from));
+                self.set_register(to, self.get_register(from));
                 1
             }
             CompareImmediate(data) => {
-                self.set_flags_cmp(data);
+                self.set_flags_for_comparison(data);
                 2
             }
             Push(rp) => {
                 match rp {
                     BC | DE | HL => {
-                        self.push(self.get_reg_pair(rp) as usize);
+                        self.push(self.get_register_pair(rp) as usize);
                     }
                     SP => {
                         panic!("Can't push SP");
@@ -681,9 +681,11 @@ impl Cpu {
                 3
             }
             AddRegisterPairToHL(rp) => {
-                let (value, carry) = self.get_reg_pair(HL).overflowing_add(self.get_reg_pair(rp));
-                self.set_reg_pair(HL, value);
-                self.flags[Flag::CY as usize] = carry;
+                let (value, carry) = self
+                    .get_register_pair(HL)
+                    .overflowing_add(self.get_register_pair(rp));
+                self.set_register_pair(HL, value);
+                self.set_flag(Flag::CY, carry);
                 3
             }
             _ => panic!("Unimplemented {:04X?}", instr),
@@ -700,8 +702,18 @@ impl Cpu {
 
     // CPU "micro-code" below
 
-    /// Set the flags taking into account carry using the before and after values
-    fn set_flags(&mut self, before: u8, after: u8, carry: bool) {
+    /// Set flag
+    fn set_flag(&mut self, flag: Flag, value: bool) {
+        self.flags[flag as usize] = value;
+    }
+
+    /// Get flag
+    fn get_flag(&self, flag: Flag) -> bool {
+        self.flags[flag as usize]
+    }
+
+    /// Set the flags for aritmethic operations taking into account carry using the before and after values
+    fn set_flags_for_aritmethic(&mut self, before: u8, after: u8, carry: bool) {
         self.flags[Flag::Z as usize] = after == 0;
         self.flags[Flag::S as usize] = ((after & 0b1000_0000) >> 7) == 1;
         self.flags[Flag::P as usize] = (((after & 0b1000_0000) >> 7)
@@ -719,14 +731,15 @@ impl Cpu {
             (before & 0b0000_1000 >> 3) == 1 && (after & 0b0001_0000 >> 4) == 1;
     }
 
-    fn set_flags_cmp(&mut self, value: u8) {
-        let acc = self.get_reg(A);
+    /// Set flags for comparisons
+    fn set_flags_for_comparison(&mut self, value: u8) {
+        let acc = self.get_register(A);
         self.flags[Flag::Z as usize] = acc == value;
         self.flags[Flag::CY as usize] = acc < value;
     }
 
     /// Set register pair
-    fn set_reg_pair(&mut self, rp: RegisterPair, data: u16) {
+    fn set_register_pair(&mut self, rp: RegisterPair, data: u16) {
         match rp {
             BC | DE | HL => {
                 let i = (rp as usize) * 2;
@@ -740,7 +753,7 @@ impl Cpu {
     }
 
     /// Get register pair
-    fn get_reg_pair(&self, rp: RegisterPair) -> u16 {
+    fn get_register_pair(&self, rp: RegisterPair) -> u16 {
         match rp {
             BC | DE | HL => {
                 let i = (rp as usize) * 2;
@@ -751,26 +764,26 @@ impl Cpu {
     }
 
     /// Set register
-    fn set_reg(&mut self, r: Register, data: u8) {
+    fn set_register(&mut self, r: Register, data: u8) {
         self.registers[r as usize] = data;
     }
 
     /// Get register
-    fn get_reg(&self, r: Register) -> u8 {
+    fn get_register(&self, r: Register) -> u8 {
         self.registers[r as usize]
     }
 
     /// Check condition
-    fn cond(&self, c: Condition) -> bool {
+    fn is_condition(&self, c: Condition) -> bool {
         match c {
-            NotZero => !self.flags[Flag::Z as usize],
-            Zero => self.flags[Flag::Z as usize],
-            NoCarry => !self.flags[Flag::CY as usize],
-            Carry => self.flags[Flag::CY as usize],
-            ParityOdd => !self.flags[Flag::P as usize],
-            ParityEven => self.flags[Flag::P as usize],
-            Plus => !self.flags[Flag::S as usize],
-            Minus => self.flags[Flag::S as usize],
+            NotZero => !self.get_flag(Flag::Z),
+            Zero => self.get_flag(Flag::Z),
+            NoCarry => !self.get_flag(Flag::CY),
+            Carry => self.get_flag(Flag::CY),
+            ParityOdd => !self.get_flag(Flag::P),
+            ParityEven => self.get_flag(Flag::P),
+            Plus => !self.get_flag(Flag::S),
+            Minus => self.get_flag(Flag::S),
         }
     }
 
@@ -946,9 +959,9 @@ mod tests {
     fn increment_register_pair() {
         let mut cpu = setup();
         for rp in [BC, DE, HL, SP] {
-            cpu.set_reg_pair(rp, 0xFF);
+            cpu.set_register_pair(rp, 0xFF);
             assert_eq!(1, cpu.execute(IncrementRegisterPair(rp)));
-            assert_eq!(0x100, cpu.get_reg_pair(rp));
+            assert_eq!(0x100, cpu.get_register_pair(rp));
         }
     }
 
@@ -956,15 +969,15 @@ mod tests {
     fn decrement_register() {
         let mut cpu = setup();
         for r in [B, C, D, E, H, L, A] {
-            cpu.set_reg(r, 1);
+            cpu.set_register(r, 1);
             assert_eq!(1, cpu.execute(DecrementRegister(r)));
-            assert_eq!(0, cpu.get_reg(r));
+            assert_eq!(0, cpu.get_register(r));
             assert_eq!(cpu.flags, [true, false, true, false, false]);
             assert_eq!(1, cpu.execute(DecrementRegister(r)));
-            assert_eq!(-1, cpu.get_reg(r) as i8);
+            assert_eq!(-1, cpu.get_register(r) as i8);
             assert_eq!(cpu.flags, [false, true, true, true, false]);
             assert_eq!(1, cpu.execute(DecrementRegister(r)));
-            assert_eq!(-2, cpu.get_reg(r) as i8);
+            assert_eq!(-2, cpu.get_register(r) as i8);
             assert_eq!(cpu.flags, [false, true, false, false, false]);
         }
     }
@@ -1009,12 +1022,12 @@ mod tests {
         let mut v = 1;
         for f in [B, C, D, E, H, L, A] {
             for t in [B, C, D, E, H, L, A] {
-                cpu.set_reg(f, v);
+                cpu.set_register(f, v);
                 if f != t {
-                    assert_ne!(cpu.get_reg(t), v);
+                    assert_ne!(cpu.get_register(t), v);
                 }
                 assert_eq!(1, cpu.execute(MoveRegister(t, f)));
-                assert_eq!(cpu.get_reg(t), v);
+                assert_eq!(cpu.get_register(t), v);
             }
             v += 1;
         }
@@ -1024,13 +1037,13 @@ mod tests {
     fn compare_immediate() {
         let mut cpu = setup();
 
-        cpu.set_reg(A, 0xFE);
+        cpu.set_register(A, 0xFE);
         assert_eq!(2, cpu.execute(CompareImmediate(0xFB)));
         assert_eq!(cpu.flags, [false; NFLAGS]);
         assert_eq!(2, cpu.execute(CompareImmediate(0xFE)));
-        assert!(cpu.flags[Flag::Z as usize]);
+        assert!(cpu.get_flag(Flag::Z));
         assert_eq!(2, cpu.execute(CompareImmediate(0xFF)));
-        assert!(cpu.flags[Flag::CY as usize]);
+        assert!(cpu.get_flag(Flag::CY));
     }
 
     #[test]
@@ -1039,7 +1052,7 @@ mod tests {
         cpu.sp = 0xF;
         let mut v = 0xA1;
         for rp in [BC, DE, HL] {
-            cpu.set_reg_pair(rp, v);
+            cpu.set_register_pair(rp, v);
             assert_eq!(3, cpu.execute(Push(rp)));
             assert_eq!(cpu.peek() as u16, v);
             v += 1;
@@ -1057,22 +1070,22 @@ mod tests {
     #[test]
     fn add_register_pair_to_hl() {
         let mut cpu = setup();
-        cpu.set_reg_pair(BC, 1);
-        cpu.set_reg_pair(DE, 2);
-        cpu.set_reg_pair(SP, 4);
-        cpu.set_reg_pair(HL, 0xFFFD);
+        cpu.set_register_pair(BC, 1);
+        cpu.set_register_pair(DE, 2);
+        cpu.set_register_pair(SP, 4);
+        cpu.set_register_pair(HL, 0xFFFD);
         assert_eq!(3, cpu.execute(AddRegisterPairToHL(BC)));
-        assert!(!cpu.flags[Flag::CY as usize]);
-        assert_eq!(0xFFFE, cpu.get_reg_pair(HL));
+        assert!(!cpu.get_flag(Flag::CY));
+        assert_eq!(0xFFFE, cpu.get_register_pair(HL));
         assert_eq!(3, cpu.execute(AddRegisterPairToHL(DE)));
-        assert!(cpu.flags[Flag::CY as usize]);
-        assert_eq!(0, cpu.get_reg_pair(HL));
+        assert!(cpu.get_flag(Flag::CY));
+        assert_eq!(0, cpu.get_register_pair(HL));
         assert_eq!(3, cpu.execute(AddRegisterPairToHL(SP)));
-        assert!(!cpu.flags[Flag::CY as usize]);
-        assert_eq!(4, cpu.get_reg_pair(HL));
+        assert!(!cpu.get_flag(Flag::CY));
+        assert_eq!(4, cpu.get_register_pair(HL));
         assert_eq!(3, cpu.execute(AddRegisterPairToHL(HL)));
-        assert!(!cpu.flags[Flag::CY as usize]);
-        assert_eq!(8, cpu.get_reg_pair(HL));
+        assert!(!cpu.get_flag(Flag::CY));
+        assert_eq!(8, cpu.get_register_pair(HL));
     }
 
     // Test helper functions/"micro-code" below
@@ -1082,8 +1095,8 @@ mod tests {
         let mut cpu = setup();
 
         for rp in [BC, DE, HL, SP] {
-            cpu.set_reg_pair(rp, 0xCAFE);
-            assert_eq!(0xCAFE, cpu.get_reg_pair(rp));
+            cpu.set_register_pair(rp, 0xCAFE);
+            assert_eq!(0xCAFE, cpu.get_register_pair(rp));
         }
     }
 
@@ -1092,8 +1105,8 @@ mod tests {
         let mut cpu = setup();
 
         for r in [B, C, D, E, H, L, A] {
-            cpu.set_reg(r, 0xFE);
-            assert_eq!(0xFE, cpu.get_reg(r));
+            cpu.set_register(r, 0xFE);
+            assert_eq!(0xFE, cpu.get_register(r));
         }
     }
 
@@ -1101,13 +1114,13 @@ mod tests {
     fn cond() {
         let mut cpu = setup();
         cpu.flags = [false; NFLAGS];
-        assert!(cpu.cond(Condition::NotZero));
-        assert!(!cpu.cond(Condition::Zero));
-        assert!(cpu.cond(Condition::NoCarry));
-        assert!(!cpu.cond(Condition::Carry));
-        assert!(cpu.cond(Condition::ParityOdd));
-        assert!(!cpu.cond(Condition::ParityEven));
-        assert!(cpu.cond(Condition::Plus));
-        assert!(!cpu.cond(Condition::Minus));
+        assert!(cpu.is_condition(Condition::NotZero));
+        assert!(!cpu.is_condition(Condition::Zero));
+        assert!(cpu.is_condition(Condition::NoCarry));
+        assert!(!cpu.is_condition(Condition::Carry));
+        assert!(cpu.is_condition(Condition::ParityOdd));
+        assert!(!cpu.is_condition(Condition::ParityEven));
+        assert!(cpu.is_condition(Condition::Plus));
+        assert!(!cpu.is_condition(Condition::Minus));
     }
 }
