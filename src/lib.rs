@@ -619,16 +619,12 @@ impl Cpu {
                 2
             }
             Call(addr) => {
-                self.memory[self.sp - 1] = ((self.pc & 0xFF00) >> 8) as u8;
-                self.memory[self.sp - 2] = (self.pc & 0x00FF) as u8;
-                self.sp -= 2;
+                self.push(self.pc);
                 self.pc = addr;
                 5
             }
             Return => {
-                self.pc =
-                    (self.memory[self.sp] as usize) | ((self.memory[self.sp + 1] as usize) << 8);
-                self.sp += 2;
+                self.pc = self.pop();
                 3
             }
             LoadAccumulatorIndirect(rp) => {
@@ -673,6 +669,17 @@ impl Cpu {
                 self.set_flags_cmp(data);
                 2
             }
+            Push(rp) => {
+                match rp {
+                    BC | DE | HL => {
+                        self.push(self.get_reg_pair(rp) as usize);
+                    }
+                    SP => {
+                        panic!("Can't push SP");
+                    }
+                }
+                3
+            }
             _ => panic!("Unimplemented {:04X?}", instr),
         };
 
@@ -684,6 +691,8 @@ impl Cpu {
 
         cycles
     }
+
+    // CPU "micro-code" below
 
     /// Set the flags taking into account carry using the before and after values
     fn set_flags(&mut self, before: u8, after: u8, carry: bool) {
@@ -757,6 +766,25 @@ impl Cpu {
             Plus => !self.flags[Flag::S as usize],
             Minus => self.flags[Flag::S as usize],
         }
+    }
+
+    /// Push
+    fn push(&mut self, data: usize) {
+        self.memory[self.sp - 1] = ((data & 0xFF00) >> 8) as u8;
+        self.memory[self.sp - 2] = (data & 0x00FF) as u8;
+        self.sp -= 2;
+    }
+
+    /// Pop
+    fn pop(&mut self) -> usize {
+        let ret = self.peek();
+        self.sp += 2;
+        ret
+    }
+
+    /// Peek
+    fn peek(&self) -> usize {
+        (self.memory[self.sp] as usize) | ((self.memory[self.sp + 1] as usize) << 8)
     }
 }
 
@@ -999,7 +1027,28 @@ mod tests {
         assert!(cpu.flags[Flag::CY as usize]);
     }
 
-    // Test helper functions below
+    #[test]
+    fn push() {
+        let mut cpu = setup();
+        cpu.sp = 0xF;
+        let mut v = 0xA1;
+        for rp in [BC, DE, HL] {
+            cpu.set_reg_pair(rp, v);
+            assert_eq!(3, cpu.execute(Push(rp)));
+            assert_eq!(cpu.peek() as u16, v);
+            v += 1;
+        }
+    }
+
+    #[test]
+    #[should_panic]
+    fn push_sp() {
+        let mut cpu = setup();
+        cpu.sp = 0xF;
+        assert_eq!(3, cpu.execute(Push(SP)));
+    }
+
+    // Test helper functions/"micro-code" below
 
     #[test]
     fn get_and_set_reg_pair() {
