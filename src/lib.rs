@@ -688,6 +688,10 @@ impl Cpu {
                 self.set_flag(Flag::CY, carry);
                 3
             }
+            ExchangeHLWithDE => {
+                self.set_register_pair(HL, self.get_register_pair(DE));
+                1
+            }
             _ => panic!("Unimplemented {:04X?}", instr),
         };
 
@@ -1086,6 +1090,14 @@ mod tests {
         assert_eq!(3, cpu.execute(AddRegisterPairToHL(HL)));
         assert!(!cpu.get_flag(Flag::CY));
         assert_eq!(8, cpu.get_register_pair(HL));
+    }
+
+    #[test]
+    fn exchange_hl_with_de() {
+        let mut cpu = setup();
+        cpu.set_register_pair(DE, 0xABCD);
+        assert_eq!(1, cpu.execute(ExchangeHLWithDE));
+        assert_eq!(0xABCD, cpu.get_register_pair(HL));
     }
 
     // Test helper functions/"micro-code" below
