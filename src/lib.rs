@@ -669,6 +669,10 @@ impl Cpu {
                 self.set_reg(to, self.get_reg(from));
                 1
             }
+            CompareImmediate(data) => {
+                self.set_flags_cmp(data);
+                2
+            }
             _ => panic!("Unimplemented {:04X?}", instr),
         };
 
@@ -698,6 +702,12 @@ impl Cpu {
         self.flags[Flag::CY as usize] = carry;
         self.flags[Flag::AC as usize] =
             (before & 0b0000_1000 >> 3) == 1 && (after & 0b0001_0000 >> 4) == 1;
+    }
+
+    fn set_flags_cmp(&mut self, value: u8) {
+        let acc = self.get_reg(A);
+        self.flags[Flag::Z as usize] = acc == value;
+        self.flags[Flag::CY as usize] = acc < value;
     }
 
     /// Set register pair
@@ -975,6 +985,20 @@ mod tests {
             v += 1;
         }
     }
+
+    #[test]
+    fn compare_immediate() {
+        let mut cpu = setup();
+
+        cpu.set_reg(A, 0xFE);
+        assert_eq!(2, cpu.execute(CompareImmediate(0xFB)));
+        assert_eq!(cpu.flags, [false; NFLAGS]);
+        assert_eq!(2, cpu.execute(CompareImmediate(0xFE)));
+        assert!(cpu.flags[Flag::Z as usize]);
+        assert_eq!(2, cpu.execute(CompareImmediate(0xFF)));
+        assert!(cpu.flags[Flag::CY as usize]);
+    }
+
     // Test helper functions below
 
     #[test]
