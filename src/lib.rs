@@ -680,6 +680,12 @@ impl Cpu {
                 }
                 3
             }
+            AddRegisterPairToHL(rp) => {
+                let (value, carry) = self.get_reg_pair(HL).overflowing_add(self.get_reg_pair(rp));
+                self.set_reg_pair(HL, value);
+                self.flags[Flag::CY as usize] = carry;
+                3
+            }
             _ => panic!("Unimplemented {:04X?}", instr),
         };
 
@@ -1046,6 +1052,27 @@ mod tests {
         let mut cpu = setup();
         cpu.sp = 0xF;
         assert_eq!(3, cpu.execute(Push(SP)));
+    }
+
+    #[test]
+    fn add_register_pair_to_hl() {
+        let mut cpu = setup();
+        cpu.set_reg_pair(BC, 1);
+        cpu.set_reg_pair(DE, 2);
+        cpu.set_reg_pair(SP, 4);
+        cpu.set_reg_pair(HL, 0xFFFD);
+        assert_eq!(3, cpu.execute(AddRegisterPairToHL(BC)));
+        assert!(!cpu.flags[Flag::CY as usize]);
+        assert_eq!(0xFFFE, cpu.get_reg_pair(HL));
+        assert_eq!(3, cpu.execute(AddRegisterPairToHL(DE)));
+        assert!(cpu.flags[Flag::CY as usize]);
+        assert_eq!(0, cpu.get_reg_pair(HL));
+        assert_eq!(3, cpu.execute(AddRegisterPairToHL(SP)));
+        assert!(!cpu.flags[Flag::CY as usize]);
+        assert_eq!(4, cpu.get_reg_pair(HL));
+        assert_eq!(3, cpu.execute(AddRegisterPairToHL(HL)));
+        assert!(!cpu.flags[Flag::CY as usize]);
+        assert_eq!(8, cpu.get_reg_pair(HL));
     }
 
     // Test helper functions/"micro-code" below
