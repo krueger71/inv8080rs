@@ -680,6 +680,18 @@ impl Cpu {
                 }
                 3
             }
+            Pop(rp) => {
+                match rp {
+                    BC | DE | HL => {
+                        let data = self.pop() as u16;
+                        self.set_register_pair(rp, data);
+                    }
+                    SP => {
+                        panic!("Can't pop SP");
+                    }
+                }
+                3
+            }
             AddRegisterPairToHL(rp) => {
                 let (value, carry) = self
                     .get_register_pair(HL)
@@ -1057,9 +1069,11 @@ mod tests {
         let mut v = 0xA1;
         for rp in [BC, DE, HL] {
             cpu.set_register_pair(rp, v);
+            let sp = cpu.sp;
             assert_eq!(3, cpu.execute(Push(rp)));
             assert_eq!(cpu.peek() as u16, v);
             v += 1;
+            assert_eq!(cpu.sp, sp - 2);
         }
     }
 
@@ -1069,6 +1083,27 @@ mod tests {
         let mut cpu = setup();
         cpu.sp = 0xF;
         assert_eq!(3, cpu.execute(Push(SP)));
+    }
+
+    #[test]
+    fn pop() {
+        let mut cpu = setup();
+        cpu.sp = 0xF;
+        for rp in [BC, DE, HL] {
+            cpu.set_register_pair(rp, 42);
+            let sp = cpu.sp;
+            assert_eq!(3, cpu.execute(Pop(rp)));
+            assert_eq!(cpu.get_register_pair(rp) as u16, 0);
+            assert_eq!(cpu.sp, sp + 2);
+        }
+    }
+
+    #[test]
+    #[should_panic]
+    fn pop_sp() {
+        let mut cpu = setup();
+        cpu.sp = 0xF;
+        assert_eq!(3, cpu.execute(Pop(SP)));
     }
 
     #[test]
