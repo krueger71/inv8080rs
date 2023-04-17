@@ -1,7 +1,7 @@
-use Condition::*;
 use Instruction::*;
 use Register::*;
 use RegisterPair::*;
+use Condition::*;
 
 /// Instructions of the Cpu in the order of Chapter 4 of the manual.
 #[derive(Copy, Clone, Debug, PartialEq)]
@@ -217,6 +217,8 @@ pub struct Cpu {
     pub sp: usize,
     /// Flags
     pub flags: [bool; NFLAGS],
+    /// Output
+    output: Vec<u8>,
 }
 
 impl Cpu {
@@ -230,6 +232,7 @@ impl Cpu {
             registers: [0; NREGS],
             sp: 0,
             flags: [false; NFLAGS],
+            output: vec![],
         }
     }
 
@@ -704,6 +707,15 @@ impl Cpu {
                 self.set_register_pair(HL, self.get_register_pair(DE));
                 1
             }
+            Output(data) => {
+                self.output.push(data);
+                println!("TODO Output");
+                3
+            }
+            MoveFromMemory(r) => {
+                self.set_register(r, self.memory[self.get_register_pair(HL) as usize]);
+                2
+            }
             _ => panic!("Unimplemented {:04X?}", instr),
         };
 
@@ -1001,27 +1013,27 @@ mod tests {
     #[test]
     fn conditional_jump() {
         let mut cpu = setup();
-        assert_eq!(3, cpu.execute(ConditionalJump(Condition::NotZero, 0x0001)));
+        assert_eq!(3, cpu.execute(ConditionalJump(NotZero, 0x0001)));
         assert_eq!(cpu.pc, 0x0001);
-        assert_eq!(3, cpu.execute(ConditionalJump(Condition::Zero, 0x0002)));
+        assert_eq!(3, cpu.execute(ConditionalJump(Zero, 0x0002)));
         assert_eq!(cpu.pc, 0x0001);
-        assert_eq!(3, cpu.execute(ConditionalJump(Condition::NoCarry, 0x0002)));
+        assert_eq!(3, cpu.execute(ConditionalJump(NoCarry, 0x0002)));
         assert_eq!(cpu.pc, 0x0002);
-        assert_eq!(3, cpu.execute(ConditionalJump(Condition::Carry, 0x0003)));
+        assert_eq!(3, cpu.execute(ConditionalJump(Carry, 0x0003)));
         assert_eq!(cpu.pc, 0x0002);
         assert_eq!(
             3,
-            cpu.execute(ConditionalJump(Condition::ParityOdd, 0x0003))
+            cpu.execute(ConditionalJump(ParityOdd, 0x0003))
         );
         assert_eq!(cpu.pc, 0x0003);
         assert_eq!(
             3,
-            cpu.execute(ConditionalJump(Condition::ParityEven, 0x0004))
+            cpu.execute(ConditionalJump(ParityEven, 0x0004))
         );
         assert_eq!(cpu.pc, 0x0003);
-        assert_eq!(3, cpu.execute(ConditionalJump(Condition::Plus, 0x0004)));
+        assert_eq!(3, cpu.execute(ConditionalJump(Plus, 0x0004)));
         assert_eq!(cpu.pc, 0x0004);
-        assert_eq!(3, cpu.execute(ConditionalJump(Condition::Minus, 0x0005)));
+        assert_eq!(3, cpu.execute(ConditionalJump(Minus, 0x0005)));
         assert_eq!(cpu.pc, 0x0004);
     }
 
@@ -1135,6 +1147,18 @@ mod tests {
         assert_eq!(0xABCD, cpu.get_register_pair(HL));
     }
 
+    #[test]
+    fn move_from_memory() {
+        let mut cpu = setup();
+        cpu.set_register_pair(HL, 0x1234);
+        cpu.memory[0x1234] = 0xAB;
+        for r in [A, B, C, D, E] {
+            assert_eq!(cpu.get_register(r), 0);
+            assert_eq!(2, cpu.execute(MoveFromMemory(r)));
+            assert_eq!(cpu.get_register(r), 0xAB);
+        }
+    }
+
     // Test helper functions/"micro-code" below
 
     #[test]
@@ -1161,13 +1185,13 @@ mod tests {
     fn cond() {
         let mut cpu = setup();
         cpu.flags = [false; NFLAGS];
-        assert!(cpu.is_condition(Condition::NotZero));
-        assert!(!cpu.is_condition(Condition::Zero));
-        assert!(cpu.is_condition(Condition::NoCarry));
-        assert!(!cpu.is_condition(Condition::Carry));
-        assert!(cpu.is_condition(Condition::ParityOdd));
-        assert!(!cpu.is_condition(Condition::ParityEven));
-        assert!(cpu.is_condition(Condition::Plus));
-        assert!(!cpu.is_condition(Condition::Minus));
+        assert!(cpu.is_condition(NotZero));
+        assert!(!cpu.is_condition(Zero));
+        assert!(cpu.is_condition(NoCarry));
+        assert!(!cpu.is_condition(Carry));
+        assert!(cpu.is_condition(ParityOdd));
+        assert!(!cpu.is_condition(ParityEven));
+        assert!(cpu.is_condition(Plus));
+        assert!(!cpu.is_condition(Minus));
     }
 }
