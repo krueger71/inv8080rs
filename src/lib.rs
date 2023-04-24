@@ -6,6 +6,11 @@ use Instruction::*;
 use Register::*;
 use RegisterPair::*;
 
+// Type aliases to match terminology in manual
+type Address = usize;
+type Data = u8;
+type Data16 = u16;
+
 /// Instructions of the Cpu in the order of Chapter 4 of the manual.
 #[derive(Copy, Clone, Debug, PartialEq)]
 enum Instruction {
@@ -16,19 +21,19 @@ enum Instruction {
     /// Move to memory - MOV M, r
     MoveToMemory(Register),
     /// Move to register immediate - MVI r, data
-    MoveImmediate(Register, u8),
+    MoveImmediate(Register, Data),
     /// Move to memory immediate - MVI M, data
-    MoveToMemoryImmediate(u8),
+    MoveToMemoryImmediate(Data),
     /// Load register pair immediate - LXI rp, data16
-    LoadRegisterPairImmediate(RegisterPair, u16),
+    LoadRegisterPairImmediate(RegisterPair, Data16),
     /// Load accumulator direct - LDA addr
-    LoadAccumulatorDirect(usize),
+    LoadAccumulatorDirect(Address),
     /// Store accumulator direct - STA addr
-    StoreAccumulatorDirect(usize),
+    StoreAccumulatorDirect(Address),
     /// Load H and L direct - LHLD addr
-    LoadHLDirect(usize),
+    LoadHLDirect(Address),
     /// Store H and L direct - SHLD addr
-    StoreHLDirect(usize),
+    StoreHLDirect(Address),
     /// Load accumulator indirect - LDAX rp
     LoadAccumulatorIndirect(RegisterPair),
     /// Store accumulator indirect - STAX rp
@@ -41,25 +46,25 @@ enum Instruction {
     /// Add memory - ADD M
     AddMemory,
     /// Add immediate - ADI data
-    AddImmediate(u8),
+    AddImmediate(Data),
     /// Add register with carry - ADC r
     AddRegisterWithCarry(Register),
     /// Add memory with carry - ADC M
     AddMemoryWithCarry,
     /// Add immediate with carry - ACI data
-    AddImmediateWithCarry(u8),
+    AddImmediateWithCarry(Data),
     /// Subtract register - SUB r
     SubtractRegister(Register),
     /// Subtract memory - SUB M
     SubtractMemory,
     /// Subtract immediate - SUI data
-    SubtractImmediate(u8),
+    SubtractImmediate(Data),
     /// Subtract register with borrow - SBB r
     SubtractRegisterWithBorrow(Register),
     /// Subtract memory with borrow - SBB M
     SubtractMemoryWithBorrow,
     /// Subtract immediate with borrow - SBI data
-    SubtractImmediateWithBorrow(u8),
+    SubtractImmediateWithBorrow(Data),
     /// Increment register - INR r
     IncrementRegister(Register),
     /// Increment memory - INR M
@@ -82,25 +87,25 @@ enum Instruction {
     /// AND memory - ANA M
     AndMemory,
     /// AND immediate - ANI data
-    AndImmediate(u8),
+    AndImmediate(Data),
     /// Exclusive OR register - XRA r
     XorRegister(Register),
     /// Exclusive OR memory - XRA M
     XorMemory,
     /// Exclusive OR immediate - XRI data
-    XorImmediate(u8),
+    XorImmediate(Data),
     /// OR register - ORA r
     OrRegister(Register),
     /// OR memory - ORA M
     OrMemory,
     /// OR immediate - ORI data
-    OrImmediate(u8),
+    OrImmediate(Data),
     /// Compare register - CMP r
     CompareRegister(Register),
     /// Compare memory - CMP M
     CompareMemory,
     /// Compare immediate - CPI data
-    CompareImmediate(u8),
+    CompareImmediate(Data),
     /// Rotate left - RLC
     RotateLeft,
     /// Rotate right - RRC
@@ -117,19 +122,19 @@ enum Instruction {
     SetCarry,
 
     /// Jump to address - JMP addr
-    Jump(usize),
+    Jump(Address),
     /// Conditional jump - Jcondition addr
-    ConditionalJump(Condition, usize),
+    ConditionalJump(Condition, Address),
     /// Call - CALL addr
-    Call(usize),
+    Call(Address),
     /// Conditional call - Ccondition addr
-    ConditionalCall(Condition, usize),
+    ConditionalCall(Condition, Address),
     /// Return - RET
     Return,
     /// Conditional return - Rcondition addr
     ConditionalReturn(Condition),
     /// Restart - RST n
-    Restart(u8),
+    Restart(Data),
     /// Jump H and L indirect, move H and L to PC - PCHL
     JumpHLIndirect,
     /// Push - PUSH rp
@@ -145,9 +150,9 @@ enum Instruction {
     /// Move HL to SP - SPHL
     MoveHLToSP,
     /// Input - IN port
-    Input(u8),
+    Input(Data),
     /// Output - OUT port
-    Output(u8),
+    Output(Data),
     /// Enable interrupts - EI
     EnableInterrupts,
     /// Disable interrupts - DI
@@ -157,7 +162,7 @@ enum Instruction {
     /// No operation - NOP
     NoOperation,
     /// Error in decoding opcode (something is wrong)
-    Err(u8),
+    Err(Data),
 }
 
 /// Register pairs
@@ -211,17 +216,17 @@ const NFLAGS: usize = 5;
 /// The CPU-model including memory etc.
 pub struct Cpu {
     /// ROM/RAM all writable for now
-    memory: [u8; MEMORY_SIZE],
+    memory: [Data; MEMORY_SIZE],
     /// Program counter
-    pc: usize,
+    pc: Address,
     /// Registers B,C,D,E,H,L and A (accumulator). Register pairs BC, DE, HL.
-    registers: [u8; NREGS],
+    registers: [Data; NREGS],
     /// Stack pointer/register pair SP
-    sp: usize,
+    sp: Address,
     /// Flags
     flags: [bool; NFLAGS],
     /// Output
-    output: Vec<u8>,
+    output: Vec<Data>,
 }
 
 impl Cpu {
@@ -247,7 +252,7 @@ impl Cpu {
 
     #[allow(clippy::unusual_byte_groupings)]
     fn fetch_and_decode(&mut self) -> Instruction {
-        let op = self.memory[self.pc];
+        let op = self.get_memory(self.pc);
 
         #[cfg(debug_assertions)]
         eprint!("{:04X} {:02X} {:08b} ", self.pc, op, op);
@@ -586,26 +591,26 @@ impl Cpu {
     }
 
     /// Fetch one byte from memory and advance program counter
-    fn fetch_data(&mut self) -> u8 {
-        let ret = self.memory[self.pc];
+    fn fetch_data(&mut self) -> Data {
+        let ret = self.get_memory(self.pc);
         self.pc += 1;
 
         ret
     }
 
     /// Fetch two bytes from memory and advance program counter
-    fn fetch_data16(&mut self) -> u16 {
-        let low = self.memory[self.pc] as u16;
+    fn fetch_data16(&mut self) -> Data16 {
+        let low = self.get_memory(self.pc) as Data16;
         self.pc += 1;
-        let high = self.memory[self.pc] as u16;
+        let high = self.get_memory(self.pc) as Data16;
         self.pc += 1;
 
         (high << 8) | low
     }
 
     /// Fetch a two-byte address from memory and advance program counter
-    fn fetch_address(&mut self) -> usize {
-        self.fetch_data16() as usize
+    fn fetch_address(&mut self) -> Address {
+        self.fetch_data16() as Address
     }
 
     /// Execute one instruction and return number of cycles taken
@@ -636,14 +641,17 @@ impl Cpu {
             LoadAccumulatorIndirect(rp) => {
                 match rp {
                     BC | DE => {
-                        self.set_register(A, self.get_memory(self.get_register_pair(rp)));
+                        self.set_register(
+                            A,
+                            self.get_memory(self.get_register_pair(rp) as Address),
+                        );
                     }
                     _ => panic!("Invalid instruction {:04X?}", instr),
                 }
                 2
             }
             MoveToMemory(r) => {
-                self.set_memory(self.get_register_pair(HL), self.get_register(r));
+                self.set_memory(self.get_register_pair(HL) as Address, self.get_register(r));
                 2
             }
             IncrementRegisterPair(rp) => {
@@ -664,7 +672,7 @@ impl Cpu {
                 3
             }
             MoveToMemoryImmediate(data) => {
-                self.memory[self.get_register_pair(HL) as usize] = data;
+                self.set_memory(self.get_register_pair(HL) as Address, data);
                 3
             }
             MoveRegister(to, from) => {
@@ -689,7 +697,7 @@ impl Cpu {
             Pop(rp) => {
                 match rp {
                     BC | DE | HL => {
-                        let data = self.pop() as u16;
+                        let data = self.pop() as Data16;
                         self.set_register_pair(rp, data);
                     }
                     SP => {
@@ -716,7 +724,7 @@ impl Cpu {
                 3
             }
             MoveFromMemory(r) => {
-                self.set_register(r, self.get_memory(self.get_register_pair(HL)));
+                self.set_register(r, self.get_memory(self.get_register_pair(HL) as Address));
                 2
             }
 
@@ -735,13 +743,13 @@ impl Cpu {
     // CPU "micro-code" below
 
     /// Get memory
-    fn get_memory(&self, addr: u16) -> u8 {
-        self.memory[addr as usize]
+    fn get_memory(&self, addr: Address) -> Data {
+        self.memory[addr]
     }
 
     /// Set memory
-    fn set_memory(&mut self, addr: u16, value: u8) {
-        self.memory[addr as usize] = value;
+    fn set_memory(&mut self, addr: Address, value: Data) {
+        self.memory[addr] = value;
     }
 
     /// Set flag
@@ -781,7 +789,7 @@ impl Cpu {
     }
 
     /// Set register pair
-    fn set_register_pair(&mut self, rp: RegisterPair, data: u16) {
+    fn set_register_pair(&mut self, rp: RegisterPair, data: Data16) {
         match rp {
             BC | DE | HL => {
                 let i = (rp as usize) * 2;
@@ -795,7 +803,7 @@ impl Cpu {
     }
 
     /// Get register pair
-    fn get_register_pair(&self, rp: RegisterPair) -> u16 {
+    fn get_register_pair(&self, rp: RegisterPair) -> Data16 {
         match rp {
             BC | DE | HL => {
                 let i = (rp as usize) * 2;
@@ -806,12 +814,12 @@ impl Cpu {
     }
 
     /// Set register
-    fn set_register(&mut self, r: Register, data: u8) {
+    fn set_register(&mut self, r: Register, data: Data) {
         self.registers[r as usize] = data;
     }
 
     /// Get register
-    fn get_register(&self, r: Register) -> u8 {
+    fn get_register(&self, r: Register) -> Data {
         self.registers[r as usize]
     }
 
@@ -830,21 +838,21 @@ impl Cpu {
     }
 
     /// Push
-    fn push(&mut self, data: usize) {
-        self.memory[self.sp - 1] = ((data & 0xFF00) >> 8) as u8;
-        self.memory[self.sp - 2] = (data & 0x00FF) as u8;
+    fn push(&mut self, data: Address) {
+        self.set_memory(self.sp - 1, ((data & 0xFF00) >> 8) as Data);
+        self.set_memory(self.sp - 2, (data & 0x00FF) as Data);
         self.sp -= 2;
     }
 
     /// Pop
-    fn pop(&mut self) -> usize {
+    fn pop(&mut self) -> Address {
         let ret = self.peek();
         self.sp += 2;
         ret
     }
 
     /// Peek
-    fn peek(&self) -> usize {
-        (self.memory[self.sp] as usize) | ((self.memory[self.sp + 1] as usize) << 8)
+    fn peek(&self) -> Address {
+        (self.get_memory(self.sp) as Address) | ((self.get_memory(self.sp + 1) as Address) << 8)
     }
 }
