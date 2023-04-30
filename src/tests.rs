@@ -224,9 +224,9 @@ fn compare_immediate() {
     assert_eq!(2, cpu.execute(CompareImmediate(0xFB)));
     assert_eq!(cpu.flags, [false; NFLAGS]);
     assert_eq!(2, cpu.execute(CompareImmediate(0xFE)));
-    assert!(cpu.get_flag(Flag::Z));
+    assert!(cpu.get_flag(Z));
     assert_eq!(2, cpu.execute(CompareImmediate(0xFF)));
-    assert!(cpu.get_flag(Flag::CY));
+    assert!(cpu.get_flag(CY));
 }
 
 #[test]
@@ -281,16 +281,16 @@ fn add_register_pair_to_hl() {
     cpu.set_register_pair(SP, 4);
     cpu.set_register_pair(HL, 0xFFFD);
     assert_eq!(3, cpu.execute(AddRegisterPairToHL(BC)));
-    assert!(!cpu.get_flag(Flag::CY));
+    assert!(!cpu.get_flag(CY));
     assert_eq!(0xFFFE, cpu.get_register_pair(HL));
     assert_eq!(3, cpu.execute(AddRegisterPairToHL(DE)));
-    assert!(cpu.get_flag(Flag::CY));
+    assert!(cpu.get_flag(CY));
     assert_eq!(0, cpu.get_register_pair(HL));
     assert_eq!(3, cpu.execute(AddRegisterPairToHL(SP)));
-    assert!(!cpu.get_flag(Flag::CY));
+    assert!(!cpu.get_flag(CY));
     assert_eq!(4, cpu.get_register_pair(HL));
     assert_eq!(3, cpu.execute(AddRegisterPairToHL(HL)));
-    assert!(!cpu.get_flag(Flag::CY));
+    assert!(!cpu.get_flag(CY));
     assert_eq!(8, cpu.get_register_pair(HL));
 }
 
@@ -348,4 +348,15 @@ fn cond() {
     assert!(!cpu.is_condition(ParityEven));
     assert!(cpu.is_condition(Plus));
     assert!(!cpu.is_condition(Minus));
+}
+
+#[test]
+fn push_processor_status_word() {
+    let mut cpu = setup();
+    cpu.flags = [true; NFLAGS];
+    cpu.registers[A as usize] = 0xAB;
+    cpu.sp = 0xFF;
+    assert_eq!(3, cpu.execute(PushProcessorStatusWord));
+    assert_eq!(0b11010111, cpu.pop_data()); // Flags
+    assert_eq!(0xAB, cpu.pop_data()); // A register
 }

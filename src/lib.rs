@@ -1,10 +1,12 @@
-#[cfg(test)]
-mod tests;
-
 use Condition::*;
 use Instruction::*;
 use Register::*;
 use RegisterPair::*;
+
+use crate::Flag::{AC, CY, P, S, Z};
+
+#[cfg(test)]
+mod tests;
 
 // Type aliases to match terminology in manual
 type Address = usize;
@@ -183,7 +185,8 @@ enum Register {
     E = 0b011,
     H = 0b100,
     L = 0b101,
-    A = 0b111,
+    //F = 0b110,  // Flags
+    A = 0b111, // Accumulator
 }
 
 /// Condition
@@ -219,7 +222,7 @@ pub struct Cpu {
     memory: [Data; MEMORY_SIZE],
     /// Program counter
     pc: Address,
-    /// Registers B,C,D,E,H,L and A (accumulator). Register pairs BC, DE, HL.
+    /// Registers B,C,D,E,H,L,F (flags) and A (accumulator). Register pairs BC, DE, HL.
     registers: [Data; NREGS],
     /// Stack pointer/register pair SP
     sp: Address,
@@ -711,7 +714,7 @@ impl Cpu {
                     .get_register_pair(HL)
                     .overflowing_add(self.get_register_pair(rp));
                 self.set_register_pair(HL, value);
-                self.set_flag(Flag::CY, carry);
+                self.set_flag(CY, carry);
                 3
             }
             ExchangeHLWithDE => {
@@ -727,7 +730,11 @@ impl Cpu {
                 self.set_register(r, self.get_memory(self.get_register_pair(HL) as Address));
                 2
             }
-
+            PushProcessorStatusWord => {
+                self.push_data(self.get_register(A));
+                self.push_data(self.get_flags());
+                3
+            }
             _ => panic!("Unimplemented {:04X?}", instr),
         };
 
@@ -762,11 +769,21 @@ impl Cpu {
         self.flags[flag as usize]
     }
 
-    /// Set the flags for aritmethic operations taking into account carry using the before and after values
+    /// Get flags
+    fn get_flags(&self) -> Data {
+        (self.get_flag(CY) as u8)
+            | 2
+            | ((self.get_flag(P) as u8) << 2)
+            | ((self.get_flag(AC) as u8) << 4)
+            | ((self.get_flag(Z) as u8) << 6)
+            | ((self.get_flag(S) as u8) << 7)
+    }
+
+    /// Set the flags for arithmetic operations taking into account carry using the before and after values
     fn set_flags_for_aritmethic(&mut self, before: u8, after: u8, carry: bool) {
-        self.flags[Flag::Z as usize] = after == 0;
-        self.flags[Flag::S as usize] = ((after & 0b1000_0000) >> 7) == 1;
-        self.flags[Flag::P as usize] = (((after & 0b1000_0000) >> 7)
+        self.flags[Z as usize] = after == 0;
+        self.flags[S as usize] = ((after & 0b1000_0000) >> 7) == 1;
+        self.flags[P as usize] = (((after & 0b1000_0000) >> 7)
             + ((after & 0b0100_0000) >> 6)
             + ((after & 0b0010_0000) >> 5)
             + ((after & 0b0001_0000) >> 4)
@@ -776,16 +793,16 @@ impl Cpu {
             + (after & 0b0000_0001))
             % 2
             == 0;
-        self.flags[Flag::CY as usize] = carry;
-        self.flags[Flag::AC as usize] =
+        self.flags[CY as usize] = carry;
+        self.flags[AC as usize] =
             (before & 0b0000_1000 >> 3) == 1 && (after & 0b0001_0000 >> 4) == 1;
     }
 
     /// Set flags for comparisons
     fn set_flags_for_comparison(&mut self, value: u8) {
         let acc = self.get_register(A);
-        self.flags[Flag::Z as usize] = acc == value;
-        self.flags[Flag::CY as usize] = acc < value;
+        self.flags[Z as usize] = acc == value;
+        self.flags[CY as usize] = acc < value;
     }
 
     /// Set register pair
@@ -826,22 +843,26 @@ impl Cpu {
     /// Check condition
     fn is_condition(&self, c: Condition) -> bool {
         match c {
-            NotZero => !self.get_flag(Flag::Z),
-            Zero => self.get_flag(Flag::Z),
-            NoCarry => !self.get_flag(Flag::CY),
-            Carry => self.get_flag(Flag::CY),
-            ParityOdd => !self.get_flag(Flag::P),
-            ParityEven => self.get_flag(Flag::P),
-            Plus => !self.get_flag(Flag::S),
-            Minus => self.get_flag(Flag::S),
+            NotZero => !self.get_flag(Z),
+            Zero => self.get_flag(Z),
+            NoCarry => !self.get_flag(CY),
+            Carry => self.get_flag(CY),
+            ParityOdd => !self.get_flag(P),
+            ParityEven => self.get_flag(P),
+            Plus => !self.get_flag(S),
+            Minus => self.get_flag(S),
         }
     }
 
     /// Push
     fn push(&mut self, data: Address) {
-        self.set_memory(self.sp - 1, ((data & 0xFF00) >> 8) as Data);
-        self.set_memory(self.sp - 2, (data & 0x00FF) as Data);
-        self.sp -= 2;
+        self.push_data(((data & 0xFF00) >> 8) as Data);
+        self.push_data((data & 0x00FF) as Data);
+    }
+
+    fn push_data(&mut self, data: Data) {
+        self.set_memory(self.sp - 1, data);
+        self.sp -= 1;
     }
 
     /// Pop
@@ -851,8 +872,18 @@ impl Cpu {
         ret
     }
 
+    fn pop_data(&mut self) -> Data {
+        let ret = self.peek_data();
+        self.sp += 1;
+        ret
+    }
+
     /// Peek
     fn peek(&self) -> Address {
         (self.get_memory(self.sp) as Address) | ((self.get_memory(self.sp + 1) as Address) << 8)
+    }
+
+    fn peek_data(&self) -> Data {
+        self.get_memory(self.sp)
     }
 }
