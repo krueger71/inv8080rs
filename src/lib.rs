@@ -735,6 +735,12 @@ impl Cpu {
                 self.push_data(self.get_flags());
                 3
             }
+            RotateRight => {
+                let acc = self.get_register(A);
+                self.set_flag(CY, (acc & 1) == 1);
+                self.set_register(A, acc.rotate_right(1));
+                1
+            }
             _ => panic!("Unimplemented {:04X?}", instr),
         };
 

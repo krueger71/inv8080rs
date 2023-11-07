@@ -360,3 +360,17 @@ fn push_processor_status_word() {
     assert_eq!(0b11010111, cpu.pop_data()); // Flags
     assert_eq!(0xAB, cpu.pop_data()); // A register
 }
+
+#[test]
+fn rotate_right() {
+    let mut cpu = setup();
+    cpu.set_register(A, 0b1000_0001);
+    cpu.flags = [false; NFLAGS];
+    assert_eq!(1, cpu.execute(RotateRight));
+    assert_eq!(0b1100_0000, cpu.get_register(A));
+    assert_eq!(true, cpu.get_flag(CY));
+    cpu.set_register(A, 0b1000_0010);
+    assert_eq!(1, cpu.execute(RotateRight));
+    assert_eq!(0b0100_0001, cpu.get_register(A));
+    assert_eq!(false, cpu.get_flag(CY));
+}
