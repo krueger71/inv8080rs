@@ -387,3 +387,13 @@ fn and_immediate() {
     assert_eq!(false, cpu.get_flag(CY));
     assert_eq!(false, cpu.get_flag(AC));
 }
+
+#[test]
+fn add_immediate() {
+    let mut cpu = setup();
+    cpu.set_register(A, 255);
+    cpu.flags = [false; NFLAGS];
+    assert_eq!(2, cpu.execute(AddImmediate(1)));
+    assert_eq!(0, cpu.get_register(A));
+    assert_eq!(true, cpu.get_flag(CY));
+}

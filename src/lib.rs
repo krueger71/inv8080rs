@@ -748,6 +748,13 @@ impl Cpu {
                 self.set_flag(AC, false);
                 2
             }
+            AddImmediate(data) => {
+                let before = self.get_register(A);
+                let (after, carry) = before.overflowing_add(data);
+                self.set_register(A, after);
+                self.set_flags_for_aritmethic(before, self.get_register(A), carry);
+                2
+            }
             _ => panic!("Unimplemented {:04X?}", instr),
         };
 
