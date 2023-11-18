@@ -374,3 +374,16 @@ fn rotate_right() {
     assert_eq!(0b0100_0001, cpu.get_register(A));
     assert_eq!(false, cpu.get_flag(CY));
 }
+
+#[test]
+fn and_immediate() {
+    let mut cpu = setup();
+    cpu.set_register(A, 0b1010_1010);
+    cpu.flags = [false; NFLAGS];
+    cpu.set_flag(CY, true);
+    cpu.set_flag(AC, true);
+    assert_eq!(2, cpu.execute(AndImmediate(0b1111_0000)));
+    assert_eq!(0b1010_1010 & 0b1111_0000, cpu.get_register(A));
+    assert_eq!(false, cpu.get_flag(CY));
+    assert_eq!(false, cpu.get_flag(AC));
+}

@@ -723,7 +723,7 @@ impl Cpu {
             }
             Output(data) => {
                 self.output.push(data);
-                println!("TODO Output");
+                println!("TODO Output {}", data);
                 3
             }
             MoveFromMemory(r) => {
@@ -740,6 +740,13 @@ impl Cpu {
                 self.set_flag(CY, (acc & 1) == 1);
                 self.set_register(A, acc.rotate_right(1));
                 1
+            }
+            AndImmediate(data) => {
+                let before = self.get_register(A);
+                self.set_register(A, before & data);
+                self.set_flags_for_aritmethic(before, self.get_register(A), false);
+                self.set_flag(AC, false);
+                2
             }
             _ => panic!("Unimplemented {:04X?}", instr),
         };
