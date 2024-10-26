@@ -185,7 +185,7 @@ enum Register {
     E = 0b011,
     H = 0b100,
     L = 0b101,
-    //F = 0b110,  // Flags
+    F = 0b110, // Flags
     A = 0b111, // Accumulator
 }
 
@@ -214,7 +214,6 @@ enum Flag {
 
 const MEMORY_SIZE: usize = 0x4000;
 const NREGS: usize = 8;
-const NFLAGS: usize = 5;
 
 /// The CPU-model including memory etc.
 pub struct Cpu {
@@ -226,8 +225,6 @@ pub struct Cpu {
     registers: [Data; NREGS],
     /// Stack pointer/register pair SP
     sp: Address,
-    /// Flags
-    flags: [bool; NFLAGS],
     /// Output
     output: Vec<Data>,
 }
@@ -242,7 +239,6 @@ impl Cpu {
             pc: 0,
             registers: [0; NREGS],
             sp: 0,
-            flags: [false; NFLAGS],
             output: vec![],
         }
     }
@@ -760,8 +756,8 @@ impl Cpu {
 
         #[cfg(debug_assertions)]
         eprintln!(
-            "     pc: {:04X}, sp: {:04X}, reg: {:02X?}, flg: {:?}",
-            self.pc, self.sp, self.registers, self.flags
+            "     pc: {:04X}, sp: {:04X}, reg: {:02X?}",
+            self.pc, self.sp, self.registers
         );
 
         cycles
@@ -779,50 +775,90 @@ impl Cpu {
         self.memory[addr] = value;
     }
 
-    /// Set flag
-    fn set_flag(&mut self, flag: Flag, value: bool) {
-        self.flags[flag as usize] = value;
+    /// Get register
+    fn get_register(&self, r: Register) -> Data {
+        self.registers[r as usize]
+    }
+
+    /// Set register
+    fn set_register(&mut self, r: Register, data: Data) {
+        self.registers[r as usize] = data;
+    }
+
+    /// Get bit
+    fn get_bit(val: u8, n: u8) -> bool {
+        return (val & (1 << n)) != 0;
+    }
+
+    /// Set bit
+    fn set_bit(value: &mut u8, n: u8, val: bool) {
+        *value = *value | ((val as u8) << n);
     }
 
     /// Get flag
     fn get_flag(&self, flag: Flag) -> bool {
-        self.flags[flag as usize]
+        let flags = self.get_register(F);
+        match flag {
+            CY => Self::get_bit(flags, 0),
+            P => Self::get_bit(flags, 2),
+            AC => Self::get_bit(flags, 4),
+            Z => Self::get_bit(flags, 6),
+            S => Self::get_bit(flags, 7),
+        }
+    }
+
+    /// Set flag
+    fn set_flag(&mut self, flag: Flag, val: bool) {
+        let mut flags = self.get_register(F);
+        match flag {
+            CY => Self::set_bit(&mut flags, 0, val),
+            P => Self::set_bit(&mut flags, 2, val),
+            AC => Self::set_bit(&mut flags, 4, val),
+            Z => Self::set_bit(&mut flags, 6, val),
+            S => Self::set_bit(&mut flags, 7, val),
+        };
+        self.set_register(F, flags);
     }
 
     /// Get flags
     fn get_flags(&self) -> Data {
-        (self.get_flag(CY) as u8)
-            | 2
-            | ((self.get_flag(P) as u8) << 2)
-            | ((self.get_flag(AC) as u8) << 4)
-            | ((self.get_flag(Z) as u8) << 6)
-            | ((self.get_flag(S) as u8) << 7)
+        self.get_register(F)
+    }
+
+    /// Set flags
+    fn set_flags(&mut self, flags: Data) {
+        self.set_register(F, flags);
     }
 
     /// Set the flags for arithmetic operations taking into account carry using the before and after values
     fn set_flags_for_aritmethic(&mut self, before: u8, after: u8, carry: bool) {
-        self.flags[Z as usize] = after == 0;
-        self.flags[S as usize] = ((after & 0b1000_0000) >> 7) == 1;
-        self.flags[P as usize] = (((after & 0b1000_0000) >> 7)
-            + ((after & 0b0100_0000) >> 6)
-            + ((after & 0b0010_0000) >> 5)
-            + ((after & 0b0001_0000) >> 4)
-            + ((after & 0b0000_1000) >> 3)
-            + ((after & 0b0000_0100) >> 2)
-            + ((after & 0b0000_0010) >> 1)
-            + (after & 0b0000_0001))
-            % 2
-            == 0;
-        self.flags[CY as usize] = carry;
-        self.flags[AC as usize] =
-            (before & 0b0000_1000 >> 3) == 1 && (after & 0b0001_0000 >> 4) == 1;
+        self.set_flag(Z, after == 0);
+        self.set_flag(S, ((after & 0b1000_0000) >> 7) == 1);
+        self.set_flag(
+            P,
+            (((after & 0b1000_0000) >> 7)
+                + ((after & 0b0100_0000) >> 6)
+                + ((after & 0b0010_0000) >> 5)
+                + ((after & 0b0001_0000) >> 4)
+                + ((after & 0b0000_1000) >> 3)
+                + ((after & 0b0000_0100) >> 2)
+                + ((after & 0b0000_0010) >> 1)
+                + (after & 0b0000_0001))
+                % 2
+                == 0,
+        );
+        self.set_flag(CY, carry);
+        self.set_flag(
+            AC,
+            (before & 0b0000_1000 >> 3) == 1 && (after & 0b0001_0000 >> 4) == 1,
+        );
     }
 
     /// Set flags for comparisons
     fn set_flags_for_comparison(&mut self, value: u8) {
         let acc = self.get_register(A);
-        self.flags[Z as usize] = acc == value;
-        self.flags[CY as usize] = acc < value;
+        self.set_flag(Z, acc == value);
+        self.set_flag(CY, acc < value);
     }
 
     /// Set register pair
@@ -848,16 +884,6 @@ impl Cpu {
             }
             SP => self.sp as u16,
         }
-    }
-
-    /// Set register
-    fn set_register(&mut self, r: Register, data: Data) {
-        self.registers[r as usize] = data;
-    }
-
-    /// Get register
-    fn get_register(&self, r: Register) -> Data {
-        self.registers[r as usize]
     }
 
     /// Check condition
