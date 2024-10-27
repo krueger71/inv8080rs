@@ -785,25 +785,15 @@ impl Cpu {
         self.registers[r as usize] = data;
     }
 
-    /// Get bit
-    fn get_bit(val: u8, n: u8) -> bool {
-        return (val & (1 << n)) != 0;
-    }
-
-    /// Set bit
-    fn set_bit(value: &mut u8, n: u8, val: bool) {
-        *value = *value | ((val as u8) << n);
-    }
-
     /// Get flag
     fn get_flag(&self, flag: Flag) -> bool {
         let flags = self.get_register(F);
         match flag {
-            CY => Self::get_bit(flags, 0),
-            P => Self::get_bit(flags, 2),
-            AC => Self::get_bit(flags, 4),
-            Z => Self::get_bit(flags, 6),
-            S => Self::get_bit(flags, 7),
+            CY => get_bit(flags, 0),
+            P => get_bit(flags, 2),
+            AC => get_bit(flags, 4),
+            Z => get_bit(flags, 6),
+            S => get_bit(flags, 7),
         }
     }
 
@@ -811,11 +801,11 @@ impl Cpu {
     fn set_flag(&mut self, flag: Flag, val: bool) {
         let mut flags = self.get_register(F);
         match flag {
-            CY => Self::set_bit(&mut flags, 0, val),
-            P => Self::set_bit(&mut flags, 2, val),
-            AC => Self::set_bit(&mut flags, 4, val),
-            Z => Self::set_bit(&mut flags, 6, val),
-            S => Self::set_bit(&mut flags, 7, val),
+            CY => set_bit(&mut flags, 0, val),
+            P => set_bit(&mut flags, 2, val),
+            AC => set_bit(&mut flags, 4, val),
+            Z => set_bit(&mut flags, 6, val),
+            S => set_bit(&mut flags, 7, val),
         };
         self.set_register(F, flags);
     }
@@ -931,5 +921,20 @@ impl Cpu {
 
     fn peek_data(&self) -> Data {
         self.get_memory(self.sp)
+    }
+}
+
+// Utilities
+/// Get bit
+pub fn get_bit(val: u8, n: u8) -> bool {
+    return (val & (1 << n)) != 0;
+}
+
+/// Set bit
+pub fn set_bit(value: &mut u8, n: u8, val: bool) {
+    if val {
+        *value |= 1 << n;
+    } else {
+        *value &= !(1 << n);
     }
 }

@@ -24,16 +24,44 @@ fn set_memory() {
 #[test]
 fn get_register() {
     let mut cpu = setup();
-    assert_eq!(0, cpu.get_register(B));
-    cpu.registers[B as usize] = 0xAB;
-    assert_eq!(0xAB, cpu.get_register(B));
+    for r in [B, C, D, E, H, L, A] {
+        assert_eq!(0, cpu.get_register(r));
+        cpu.registers[r as usize] = 0xF0 | r as u8;
+        assert_eq!(0xF0 | r as u8, cpu.get_register(r));
+    }
 }
 
 #[test]
 fn set_register() {
     let mut cpu = setup();
-    cpu.set_register(C, 0xAB);
-    assert_eq!(0xAB, cpu.get_register(C));
+    for r in [B, C, D, E, H, L, A] {
+        cpu.set_register(r, 0xF0 | r as u8);
+        assert_eq!(0xF0 | r as u8, cpu.get_register(r));
+    }
+}
+
+#[test]
+fn get_bit() {
+    let data: u8 = 0b10100101;
+    assert!(super::get_bit(data, 0));
+    assert!(!super::get_bit(data, 1));
+    assert!(super::get_bit(data, 2));
+    assert!(!super::get_bit(data, 3));
+    assert!(!super::get_bit(data, 4));
+    assert!(super::get_bit(data, 5));
+    assert!(!super::get_bit(data, 6));
+    assert!(super::get_bit(data, 7));
+}
+
+#[test]
+fn set_bit() {
+    let mut data: u8 = 0;
+    for i in 0..8 {
+        super::set_bit(&mut data, i, true);
+        assert!(super::get_bit(data, i));
+        super::set_bit(&mut data, i, false);
+        assert!(!super::get_bit(data, i));
+    }
 }
 
 // Test CPU operations
@@ -194,11 +222,11 @@ fn decrement_register() {
         cpu.set_register(r, 1);
         assert_eq!(1, cpu.execute(DecrementRegister(r)));
         assert_eq!(0, cpu.get_register(r));
-        assert_eq!(cpu.get_flag(Z), true);        
-        assert_eq!(cpu.get_flag(S), false);        
-        assert_eq!(cpu.get_flag(P), true);        
-        assert_eq!(cpu.get_flag(CY), false);        
-        assert_eq!(cpu.get_flag(AC), false);        
+        assert_eq!(cpu.get_flag(Z), true);
+        assert_eq!(cpu.get_flag(S), false);
+        assert_eq!(cpu.get_flag(P), true);
+        assert_eq!(cpu.get_flag(CY), false);
+        assert_eq!(cpu.get_flag(AC), false);
         assert_eq!(1, cpu.execute(DecrementRegister(r)));
         assert_eq!(-1, cpu.get_register(r) as i8);
         //assert_eq!(cpu.get_flags(), [false, true, true, true, false]);
