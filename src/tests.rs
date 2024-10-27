@@ -423,23 +423,25 @@ fn push_processor_status_word() {
     cpu.registers[A as usize] = 0xAB;
     cpu.sp = 0xFF;
     assert_eq!(3, cpu.execute(PushProcessorStatusWord));
+    assert_eq!(0xFD, cpu.sp);
     assert_eq!(0b1111_1111, cpu.pop_data()); // Flags
     assert_eq!(0xAB, cpu.pop_data()); // A register
 }
 
-/*#[test]
+#[test]
 fn pop_processor_status_word() {
     let mut cpu = setup();
-    cpu.flags = [true; NFLAGS];
-    cpu.registers[A as usize] = 0xAB;
+    cpu.set_flags(0xFF);
+    cpu.set_register(A, 0xAB);
     cpu.sp = 0xFF;
     cpu.execute(PushProcessorStatusWord);
-    cpu.flags = [false; NFLAGS];
-    cpu.registers[A as usize] = 0;
+    cpu.set_flags(0);
+    cpu.set_register(A, 0);
     assert_eq!(3, cpu.execute(PopProcessorStatusWord));
-    assert_eq!(1, 2);
+    assert_eq!(0xFF, cpu.get_flags());
+    assert_eq!(0xAB, cpu.get_register(A));
+    assert_eq!(0xFF, cpu.sp);
 }
-*/
 
 #[test]
 fn rotate_right() {

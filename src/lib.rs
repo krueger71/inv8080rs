@@ -731,6 +731,13 @@ impl Cpu {
                 self.push_data(self.get_flags());
                 3
             }
+            PopProcessorStatusWord => {
+                let flags = self.pop_data();
+                self.set_flags(flags);
+                let a = self.pop_data();
+                self.set_register(A, a);
+                3
+            }
             RotateRight => {
                 let acc = self.get_register(A);
                 self.set_flag(CY, (acc & 1) == 1);
