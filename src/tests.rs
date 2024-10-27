@@ -26,7 +26,7 @@ fn get_register() {
     let mut cpu = setup();
     for r in [B, C, D, E, H, L, A] {
         assert_eq!(0, cpu.get_register(r));
-        cpu.registers[r as usize] = 0xF0 | r as u8;
+        cpu.set_register(r, 0xF0 | r as u8);
         assert_eq!(0xF0 | r as u8, cpu.get_register(r));
     }
 }
@@ -125,7 +125,7 @@ fn move_immediate() {
         assert_eq!(2, cpu.execute(MoveImmediate(r, v)));
         assert_eq!(cpu.pc, 0);
         assert_eq!(cpu.sp, 0);
-        assert_eq!(cpu.registers[r as usize], v);
+        assert_eq!(cpu.get_register(r), v);
         assert_eq!(cpu.get_flags(), 0);
         v += 1;
     }
@@ -160,14 +160,14 @@ fn load_accumulator_indirect() {
     let mut cpu = setup();
     cpu.memory[0x1234] = 0x56;
     cpu.memory[0x2345] = 0x67;
-    cpu.registers[B as usize] = 0x12;
-    cpu.registers[C as usize] = 0x34;
+    cpu.set_register(B, 0x12);
+    cpu.set_register(C, 0x34);
     assert_eq!(2, cpu.execute(LoadAccumulatorIndirect(BC)));
-    assert_eq!(0x56, cpu.registers[A as usize]);
-    cpu.registers[D as usize] = 0x23;
-    cpu.registers[E as usize] = 0x45;
+    assert_eq!(0x56, cpu.get_register(A));
+    cpu.set_register(D, 0x23);
+    cpu.set_register(E, 0x45);
     assert_eq!(2, cpu.execute(LoadAccumulatorIndirect(DE)));
-    assert_eq!(0x67, cpu.registers[A as usize]);
+    assert_eq!(0x67, cpu.get_register(A));
 
     assert_eq!(cpu.pc, 0);
     assert_eq!(cpu.sp, 0);
@@ -193,9 +193,9 @@ fn move_to_memory() {
     let mut cpu = setup();
     let mut v = 1u8;
     for r in [B, C, D, E, A] {
-        cpu.registers[H as usize] = 1;
-        cpu.registers[L as usize] = v;
-        cpu.registers[r as usize] = v + 1;
+        cpu.set_register(H, 1);
+        cpu.set_register(L, v);
+        cpu.set_register(r, v + 1);
         assert_eq!(2, cpu.execute(MoveToMemory(r)));
         assert_eq!(cpu.pc, 0);
         assert_eq!(cpu.sp, 0);
@@ -420,7 +420,7 @@ fn cond() {
 fn push_processor_status_word() {
     let mut cpu = setup();
     cpu.set_flags(0xFF);
-    cpu.registers[A as usize] = 0xAB;
+    cpu.set_register(A, 0xAB);
     cpu.sp = 0xFF;
     assert_eq!(3, cpu.execute(PushProcessorStatusWord));
     assert_eq!(0xFD, cpu.sp);
