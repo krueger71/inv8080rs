@@ -817,6 +817,10 @@ impl Cpu {
 
     /// Set flags
     fn set_flags(&mut self, flags: Data) {
+        // TODO This might be necessary
+        //set_bit(&mut flags, 1, true);   // Always set
+        //set_bit(&mut flags, 3, false);   // Always unset
+        //set_bit(&mut flags, 5, false);   // Always unset
         self.set_register(F, flags);
     }
 
@@ -927,7 +931,7 @@ impl Cpu {
 // Utilities
 /// Get bit
 pub fn get_bit(val: u8, n: u8) -> bool {
-    return (val & (1 << n)) != 0;
+    (val & (1 << n)) != 0
 }
 
 /// Set bit

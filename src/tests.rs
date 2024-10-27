@@ -423,7 +423,7 @@ fn push_processor_status_word() {
     cpu.registers[A as usize] = 0xAB;
     cpu.sp = 0xFF;
     assert_eq!(3, cpu.execute(PushProcessorStatusWord));
-    assert_eq!(0b11010111, cpu.pop_data()); // Flags
+    assert_eq!(0b1111_1111, cpu.pop_data()); // Flags
     assert_eq!(0xAB, cpu.pop_data()); // A register
 }
 
