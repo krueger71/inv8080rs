@@ -64,6 +64,28 @@ fn set_bit() {
     }
 }
 
+#[test]
+fn get_flag() {
+    let mut cpu = setup();
+    for f in [CY, P, AC, Z, S] {
+        assert!(!cpu.get_flag(f));
+    }
+    cpu.set_register(F, 0b1101_0101);
+    for f in [CY, P, AC, Z, S] {
+        assert!(cpu.get_flag(f));
+    }
+}
+
+#[test]
+fn set_flag() {
+    let mut cpu = setup();
+    for f in [CY, P, AC, Z, S] {
+        assert!(!cpu.get_flag(f));
+        cpu.set_flag(f, true);
+        assert!(cpu.get_flag(f));
+    }
+}
+
 // Test CPU operations
 
 #[test]
