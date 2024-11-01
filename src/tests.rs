@@ -86,6 +86,22 @@ fn set_flag() {
     }
 }
 
+#[test]
+fn get_flags() {
+    let mut cpu = setup();
+    assert_eq!(0, cpu.get_flags());
+    cpu.set_register(F, 0xFF);
+    assert_eq!(0xFF, cpu.get_flags());
+}
+
+#[test]
+fn set_flags() {
+    let mut cpu = setup();
+    assert_eq!(0, cpu.get_flags());
+    cpu.set_flags(0xFF);
+    assert_eq!(0xFF, cpu.get_flags());
+}
+
 // Test CPU operations
 
 #[test]
