@@ -758,6 +758,11 @@ impl Cpu {
                 self.set_flags_for_aritmethic(before, self.get_register(A), carry);
                 2
             }
+            LoadAccumulatorDirect(addr) => {
+                let data = self.get_memory(addr);
+                self.set_register(A, data);
+                4
+            }
             _ => panic!("Unimplemented {:04X?}", instr),
         };
 

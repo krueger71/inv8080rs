@@ -517,3 +517,12 @@ fn add_immediate() {
     assert_eq!(0, cpu.get_register(A));
     assert_eq!(true, cpu.get_flag(CY));
 }
+
+#[test]
+fn load_accumulator_direct() {
+    let mut cpu = setup();
+    let addr = MEMORY_SIZE - 1;
+    cpu.set_memory(addr, 0xAB);
+    assert_eq!(4, cpu.execute(LoadAccumulatorDirect(addr)));
+    assert_eq!(0xAB, cpu.get_register(A));
+}
