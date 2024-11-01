@@ -759,8 +759,11 @@ impl Cpu {
                 2
             }
             LoadAccumulatorDirect(addr) => {
-                let data = self.get_memory(addr);
-                self.set_register(A, data);
+                self.set_register(A, self.get_memory(addr));
+                4
+            }
+            StoreAccumulatorDirect(addr) => {
+                self.set_memory(addr, self.get_register(A));
                 4
             }
             _ => panic!("Unimplemented {:04X?}", instr),
@@ -783,8 +786,8 @@ impl Cpu {
     }
 
     /// Set memory
-    fn set_memory(&mut self, addr: Address, value: Data) {
-        self.memory[addr] = value;
+    fn set_memory(&mut self, addr: Address, data: Data) {
+        self.memory[addr] = data;
     }
 
     /// Get register

@@ -526,3 +526,12 @@ fn load_accumulator_direct() {
     assert_eq!(4, cpu.execute(LoadAccumulatorDirect(addr)));
     assert_eq!(0xAB, cpu.get_register(A));
 }
+
+#[test]
+fn store_accumulator_direct() {
+    let mut cpu = setup();
+    let addr = MEMORY_SIZE - 1;
+    cpu.set_register(A, 0xAB);
+    assert_eq!(4, cpu.execute(StoreAccumulatorDirect(addr)));
+    assert_eq!(0xAB, cpu.get_memory(addr));
+}
