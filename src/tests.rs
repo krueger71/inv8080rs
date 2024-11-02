@@ -539,7 +539,7 @@ fn store_accumulator_direct() {
 #[test]
 fn xor_register() {
     let mut cpu = setup();
-    for r in [B,C,D,E,H,L] {
+    for r in [B, C, D, E, H, L] {
         cpu.set_flag(CY, true);
         cpu.set_flag(AC, true);
         cpu.set_register(A, 0b1010_1010);
@@ -549,4 +549,19 @@ fn xor_register() {
         assert!(!cpu.get_flag(CY));
         assert!(!cpu.get_flag(AC));
     }
+}
+
+#[test]
+fn disable_interrupts() {
+    let mut cpu = setup();
+    cpu.interruptable = true;
+    assert_eq!(1, cpu.execute(DisableInterrupts));
+    assert!(!cpu.interruptable);
+}
+
+#[test]
+fn enable_interrupts() {
+    let mut cpu = setup();
+    assert_eq!(1, cpu.execute(EnableInterrupts));
+    assert!(cpu.interruptable);
 }

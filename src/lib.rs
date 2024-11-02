@@ -227,6 +227,8 @@ pub struct Cpu {
     sp: Address,
     /// Output
     output: Vec<Data>,
+    /// CPU interruptable
+    interruptable: bool,
 }
 
 impl Cpu {
@@ -240,6 +242,7 @@ impl Cpu {
             registers: [0; NREGS],
             sp: 0,
             output: vec![],
+            interruptable: false,
         }
     }
 
@@ -771,6 +774,15 @@ impl Cpu {
                 self.set_register(A, before ^ self.get_register(r));
                 self.set_flag(CY, false);
                 self.set_flag(AC, false);
+                1
+            }
+            DisableInterrupts => {
+                self.interruptable = false;
+                1
+            }
+            EnableInterrupts => {
+                // TODO The CPU should be interruptable following the next instruction
+                self.interruptable = true;
                 1
             }
             _ => panic!("Unimplemented {:04X?}", instr),
