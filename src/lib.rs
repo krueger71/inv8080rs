@@ -766,6 +766,13 @@ impl Cpu {
                 self.set_memory(addr, self.get_register(A));
                 4
             }
+            XorRegister(r) => {
+                let before = self.get_register(A);
+                self.set_register(A, before ^ self.get_register(r));
+                self.set_flag(CY, false);
+                self.set_flag(AC, false);
+                1
+            }
             _ => panic!("Unimplemented {:04X?}", instr),
         };
 

@@ -535,3 +535,18 @@ fn store_accumulator_direct() {
     assert_eq!(4, cpu.execute(StoreAccumulatorDirect(addr)));
     assert_eq!(0xAB, cpu.get_memory(addr));
 }
+
+#[test]
+fn xor_register() {
+    let mut cpu = setup();
+    for r in [B,C,D,E,H,L] {
+        cpu.set_flag(CY, true);
+        cpu.set_flag(AC, true);
+        cpu.set_register(A, 0b1010_1010);
+        cpu.set_register(r, 0b0100_1111);
+        assert_eq!(1, cpu.execute(XorRegister(r)));
+        assert_eq!(0b1110_0101, cpu.get_register(A));
+        assert!(!cpu.get_flag(CY));
+        assert!(!cpu.get_flag(AC));
+    }
+}
