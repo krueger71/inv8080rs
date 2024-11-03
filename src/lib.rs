@@ -772,7 +772,7 @@ impl Cpu {
             XorRegister(r) => {
                 let before = self.get_register(A);
                 self.set_register(A, before ^ self.get_register(r));
-                self.set_flag(CY, false);
+                self.set_flags_for_aritmethic(before, self.get_register(A), false);
                 self.set_flag(AC, false);
                 1
             }
