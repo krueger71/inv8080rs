@@ -776,6 +776,12 @@ impl Cpu {
                 self.set_flag(AC, false);
                 1
             }
+            AndRegister(r) => {
+                let before = self.get_register(A);
+                self.set_register(A, before & self.get_register(r));
+                self.set_flags_for_aritmethic(before, self.get_register(A), false);
+                1
+            }
             DisableInterrupts => {
                 self.interruptable = false;
                 1

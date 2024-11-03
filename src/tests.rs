@@ -565,3 +565,16 @@ fn enable_interrupts() {
     assert_eq!(1, cpu.execute(EnableInterrupts));
     assert!(cpu.interruptable);
 }
+
+#[test]
+fn and_register() {
+    let mut cpu = setup();
+    for r in [B, C, D, E, H, L] {
+        cpu.set_flag(CY, true);
+        cpu.set_register(A, 0b1010_1010);
+        cpu.set_register(r, 0b0100_1111);
+        assert_eq!(1, cpu.execute(AndRegister(r)));
+        assert_eq!(0b0000_1010, cpu.get_register(A));
+        assert!(!cpu.get_flag(CY));
+    }
+}
