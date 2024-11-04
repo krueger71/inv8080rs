@@ -1,11 +1,11 @@
 //! CPU module
 
+use crate::utils::*;
 use Condition::*;
 use Flag::*;
 use Instruction::*;
 use Register::*;
 use RegisterPair::*;
-use crate::utils::*;
 
 #[cfg(test)]
 mod tests;
