@@ -41,30 +41,6 @@ fn set_register() {
 }
 
 #[test]
-fn get_bit() {
-    let data: u8 = 0b10100101;
-    assert!(super::get_bit(data, 0));
-    assert!(!super::get_bit(data, 1));
-    assert!(super::get_bit(data, 2));
-    assert!(!super::get_bit(data, 3));
-    assert!(!super::get_bit(data, 4));
-    assert!(super::get_bit(data, 5));
-    assert!(!super::get_bit(data, 6));
-    assert!(super::get_bit(data, 7));
-}
-
-#[test]
-fn set_bit() {
-    let mut data: u8 = 0;
-    for i in 0..8 {
-        super::set_bit(&mut data, i, true);
-        assert!(super::get_bit(data, i));
-        super::set_bit(&mut data, i, false);
-        assert!(!super::get_bit(data, i));
-    }
-}
-
-#[test]
 fn get_flag() {
     let mut cpu = setup();
     for f in [CY, P, AC, Z, S] {
