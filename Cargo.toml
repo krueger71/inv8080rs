@@ -8,7 +8,4 @@ categories = ["emulators", "games"]
 keywords = ["emulator", "arcade", "8-bit", "intel-8080"]
 edition = "2021"
 
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
 [dependencies]
