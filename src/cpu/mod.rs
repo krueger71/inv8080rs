@@ -10,9 +10,6 @@ use RegisterPair::*;
 #[cfg(test)]
 mod tests;
 
-pub const DISPLAY_WIDTH: u32 = 256;
-pub const DISPLAY_HEIGHT: u32 = 224;
-
 // Type aliases to match terminology in manual
 type Address = usize;
 type Data = u8;
@@ -252,9 +249,9 @@ impl Cpu {
     }
 
     /// Fetch, decode and execute one instruction
-    pub fn step(&mut self) {
+    pub fn step(&mut self) -> u8 {
         let instr = self.fetch_and_decode();
-        self.execute(instr);
+        self.execute(instr)
     }
 
     #[allow(clippy::unusual_byte_groupings)]
