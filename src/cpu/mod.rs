@@ -10,6 +10,9 @@ use RegisterPair::*;
 #[cfg(test)]
 mod tests;
 
+pub const DISPLAY_WIDTH: u32 = 256;
+pub const DISPLAY_HEIGHT: u32 = 224;
+
 // Type aliases to match terminology in manual
 type Address = usize;
 type Data = u8;
