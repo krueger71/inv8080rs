@@ -20,7 +20,7 @@ mod tests;
 pub const DISPLAY_WIDTH: u32 = 256;
 pub const DISPLAY_HEIGHT: u32 = 224;
 pub const FPS: u32 = 60;
-pub const FREQ: u32 = 1_996_800_000;
+pub const FREQ: u32 = 1_996_800; // ~ 2 MHz CPU
 
 /// Options for the emulator
 #[derive(Debug)]
@@ -161,6 +161,7 @@ impl Emu {
         );
 
         let mut events = sdl.event_pump().unwrap();
+        let cycles_per_frame = (1000 / self.fps) * (self.freq / 1000);
 
         'main: loop {
             let t = Instant::now();
@@ -199,7 +200,17 @@ impl Emu {
             }
 
             // Run correct number of cycles, generate interrupts etc
-            self.cpu.step();
+            let mut cycles: u32 = 0;
+
+            while cycles < cycles_per_frame {
+                cycles += self.cpu.step();
+                // Interrupts should happen in the middle of frame and at the end
+            }
+
+            // Draw the framebuffer
+            for byte in self.cpu.framebuffer() {
+                // Each byte is 8 pixels
+            }
 
             // Copy grid texture on top (could be configurable)
             canvas.copy(&grid, None, None).unwrap();

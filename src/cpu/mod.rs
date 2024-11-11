@@ -249,9 +249,14 @@ impl Cpu {
     }
 
     /// Fetch, decode and execute one instruction
-    pub fn step(&mut self) -> u8 {
+    pub fn step(&mut self) -> u32 {
         let instr = self.fetch_and_decode();
         self.execute(instr)
+    }
+
+    /// Return the slice of memory that contains the framebuffer
+    pub fn framebuffer(&self) -> &[u8] {
+        &self.memory[0x2400..0x4000]
     }
 
     #[allow(clippy::unusual_byte_groupings)]
@@ -618,7 +623,7 @@ impl Cpu {
     }
 
     /// Execute one instruction and return number of cycles taken
-    fn execute(&mut self, instr: Instruction) -> u8 {
+    fn execute(&mut self, instr: Instruction) -> u32 {
         let cycles = match instr {
             NoOperation => 1,
             Jump(addr) => {
@@ -724,7 +729,9 @@ impl Cpu {
             }
             Output(data) => {
                 self.output.push(data);
-                println!("TODO Output {}", data);
+
+                #[cfg(debug_assertions)]
+                eprintln!("TODO Output {}", data);
                 3
             }
             MoveFromMemory(r) => {
