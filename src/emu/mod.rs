@@ -9,6 +9,7 @@ use sdl2::{
     event::Event,
     keyboard::{Keycode, Scancode},
     pixels::{Color, PixelFormatEnum},
+    rect::Point,
     render::BlendMode,
 };
 
@@ -137,7 +138,7 @@ impl Emu {
             })
             .unwrap();
 
-        // The logical size is set to the size of the Chip8 display. It makes it possible to draw single pixels at the correct position and get a scaled display automatically
+        // The logical size is set to the size of the display. It makes it possible to draw single pixels at the correct position and get a scaled display automatically
         canvas
             .set_logical_size(DISPLAY_WIDTH, DISPLAY_HEIGHT)
             .unwrap();
@@ -207,15 +208,29 @@ impl Emu {
                 // Interrupts should happen in the middle of frame and at the end
             }
 
-            // Draw the framebuffer
-            for byte in self.cpu.framebuffer() {
-                // Each byte is 8 pixels
+            if self.cpu.display_update {
+                canvas.set_draw_color(background_color);
+                canvas.clear();
+                canvas.set_draw_color(foreground_color);
+
+                for y in 0..DISPLAY_HEIGHT {
+                    for x in 0..DISPLAY_WIDTH {
+                        if self.cpu.display(x, y) {
+                            canvas.draw_point(Point::new(x as i32, y as i32)).unwrap();
+                        }
+                    }
+                }
+
+                // Copy grid texture on top to give a slight pixellated look
+                canvas.copy(&grid, None, None).unwrap();
+
+                canvas.present();
+
+                #[cfg(debug_assertions)]
+                eprintln!("Display updated");
+
+                //self.cpu.display_update = false; // Cpu will set this to true whenever something changes on screen
             }
-
-            // Copy grid texture on top (could be configurable)
-            canvas.copy(&grid, None, None).unwrap();
-
-            canvas.present();
 
             let sleep_duration =
                 (1_000_000_000_i64 / self.fps as i64) - t.elapsed().as_nanos() as i64;

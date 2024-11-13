@@ -231,6 +231,9 @@ pub struct Cpu {
     output: Vec<Data>,
     /// CPU interruptable
     interruptable: bool,
+    /// Display should be updated (this is set to true on memory writes to the framebuffer region of memory, then emulator clears it after drawing is finished)
+    /// Probably next to useless optimization for a game where everything is moving on the screen :)
+    pub display_update: bool,
 }
 
 impl Cpu {
@@ -245,6 +248,7 @@ impl Cpu {
             sp: 0,
             output: vec![],
             interruptable: false,
+            display_update: true,
         }
     }
 
@@ -255,8 +259,9 @@ impl Cpu {
     }
 
     /// Return the slice of memory that contains the framebuffer
-    pub fn framebuffer(&self) -> &[u8] {
-        &self.memory[0x2400..0x4000]
+    pub fn display(&self, x: u32, y: u32) -> bool {
+        let framebuffer = &self.memory[0x2400..0x4000];
+        true
     }
 
     #[allow(clippy::unusual_byte_groupings)]
