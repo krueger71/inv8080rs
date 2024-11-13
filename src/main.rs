@@ -9,8 +9,8 @@ fn main() {
         Cpu::new(program),
         Options {
             scale: 3,               // 256x224 -> 768x672 display size
-            color: 0xff00ff00,      // ARGB8888 -> bright green
-            background: 0xff000000, // ARGB8888 -> black
+            color: 0xff33ff00,      // ARGB8888 -> crt fosfor green
+            background: 0xff111111, // ARGB8888 -> almost black
         },
     );
 
