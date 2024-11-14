@@ -13,13 +13,11 @@ use sdl2::{
     render::BlendMode,
 };
 
-use crate::cpu::Cpu;
+use crate::cpu::{Cpu, DISPLAY_HEIGHT, DISPLAY_WIDTH};
 
 #[cfg(test)]
 mod tests;
 
-pub const DISPLAY_WIDTH: u32 = 256;
-pub const DISPLAY_HEIGHT: u32 = 224;
 pub const FPS: u32 = 60;
 pub const FREQ: u32 = 1_996_800; // ~ 2 MHz CPU
 

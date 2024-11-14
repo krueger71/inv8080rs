@@ -10,6 +10,9 @@ use RegisterPair::*;
 #[cfg(test)]
 mod tests;
 
+pub const DISPLAY_WIDTH: u32 = 256;
+pub const DISPLAY_HEIGHT: u32 = 224;
+
 // Type aliases to match terminology in manual
 type Address = usize;
 type Data = u8;
@@ -261,7 +264,9 @@ impl Cpu {
     /// Return the slice of memory that contains the framebuffer
     pub fn display(&self, x: u32, y: u32) -> bool {
         let framebuffer = &self.memory[0x2400..0x4000];
-        true
+        let byte = framebuffer[(y * (DISPLAY_WIDTH / 8) + (x / 8)) as usize];
+
+        get_bit(byte, (x % 8) as u8)
     }
 
     #[allow(clippy::unusual_byte_groupings)]
