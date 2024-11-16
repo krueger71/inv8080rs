@@ -97,7 +97,7 @@ impl Emu {
             ((self.color & 0xff000000) >> 24) as u8,
         );
 
-        // Create a grid as a texture
+        // Create an overlay grid for pixelation effect as a texture
         let texture_creator = canvas.texture_creator();
         let mut grid = texture_creator
             .create_texture_target(
@@ -219,7 +219,7 @@ impl Emu {
                     }
                 }
 
-                // Copy grid texture on top to give a slight pixellated look
+                // Copy grid texture on top to give a slight pixelated look
                 canvas.copy(&grid, None, None).unwrap();
 
                 canvas.present();

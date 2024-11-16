@@ -264,7 +264,8 @@ impl Cpu {
     /// Return true if pixel at logical display coordinate (x, y) is on.
     pub fn display(&self, x: u32, y: u32) -> bool {
         let framebuffer = &self.memory[0x2400..0x4000];
-        let byte = framebuffer[(x*DISPLAY_HEIGHT/8 + (DISPLAY_HEIGHT/8 - y/8) - 1) as usize];
+        let byte =
+            framebuffer[(x * DISPLAY_HEIGHT / 8 + (DISPLAY_HEIGHT / 8 - y / 8) - 1) as usize];
         get_bit(byte, 7 - (y % 8) as u8)
     }
 
@@ -802,11 +803,13 @@ impl Cpu {
             }
             DisableInterrupts => {
                 self.interruptable = false;
+                eprintln!("Disable interrupts");
                 1
             }
             EnableInterrupts => {
                 // TODO The CPU should be interruptable following the next instruction
                 self.interruptable = true;
+                eprintln!("Enable interrupts");
                 1
             }
             _ => panic!("Unimplemented {:04X?}", instr),

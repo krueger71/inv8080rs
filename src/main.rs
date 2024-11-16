@@ -9,7 +9,7 @@ fn main() {
         Cpu::new(program),
         Options {
             scale: 3,               // 256x224 -> 768x672 display size
-            color: 0xff33ff00,      // ARGB8888 -> crt fosfor green
+            color: 0xff33ff00,      // ARGB8888 -> CRT phosphor green
             background: 0xff111111, // ARGB8888 -> almost black
         },
     );
