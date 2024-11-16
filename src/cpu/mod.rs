@@ -10,8 +10,8 @@ use RegisterPair::*;
 #[cfg(test)]
 mod tests;
 
-pub const DISPLAY_WIDTH: u32 = 256;
-pub const DISPLAY_HEIGHT: u32 = 224;
+pub const DISPLAY_WIDTH: u32 = 224;
+pub const DISPLAY_HEIGHT: u32 = 256;
 
 // Type aliases to match terminology in manual
 type Address = usize;
@@ -261,12 +261,11 @@ impl Cpu {
         self.execute(instr)
     }
 
-    /// Return the slice of memory that contains the framebuffer
+    /// Return true if pixel at logical display coordinate (x, y) is on.
     pub fn display(&self, x: u32, y: u32) -> bool {
         let framebuffer = &self.memory[0x2400..0x4000];
-        let byte = framebuffer[(y * (DISPLAY_WIDTH / 8) + (x / 8)) as usize];
-
-        get_bit(byte, (x % 8) as u8)
+        let byte = framebuffer[(x*DISPLAY_HEIGHT/8 + (DISPLAY_HEIGHT/8 - y/8) - 1) as usize];
+        get_bit(byte, 7 - (y % 8) as u8)
     }
 
     #[allow(clippy::unusual_byte_groupings)]
