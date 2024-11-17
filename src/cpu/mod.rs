@@ -675,7 +675,7 @@ impl Cpu {
                 let before = self.get_register(r);
                 let (after, carry) = before.overflowing_sub(1);
                 self.set_register(r, after);
-                self.set_flags_for_aritmethic(before, after, carry);
+                self.set_flags_for_arithmetic(before, after, carry);
                 1
             }
             ConditionalJump(c, addr) => {
@@ -764,7 +764,7 @@ impl Cpu {
             AndImmediate(data) => {
                 let before = self.get_register(A);
                 self.set_register(A, before & data);
-                self.set_flags_for_aritmethic(before, self.get_register(A), false);
+                self.set_flags_for_arithmetic(before, self.get_register(A), false);
                 self.set_flag(AC, false);
                 2
             }
@@ -772,7 +772,7 @@ impl Cpu {
                 let before = self.get_register(A);
                 let (after, carry) = before.overflowing_add(data);
                 self.set_register(A, after);
-                self.set_flags_for_aritmethic(before, self.get_register(A), carry);
+                self.set_flags_for_arithmetic(before, self.get_register(A), carry);
                 2
             }
             LoadAccumulatorDirect(addr) => {
@@ -786,14 +786,14 @@ impl Cpu {
             XorRegister(r) => {
                 let before = self.get_register(A);
                 self.set_register(A, before ^ self.get_register(r));
-                self.set_flags_for_aritmethic(before, self.get_register(A), false);
+                self.set_flags_for_arithmetic(before, self.get_register(A), false);
                 self.set_flag(AC, false);
                 1
             }
             AndRegister(r) => {
                 let before = self.get_register(A);
                 self.set_register(A, before & self.get_register(r));
-                self.set_flags_for_aritmethic(before, self.get_register(A), false);
+                self.set_flags_for_arithmetic(before, self.get_register(A), false);
                 1
             }
             DisableInterrupts => {
@@ -881,7 +881,7 @@ impl Cpu {
     }
 
     /// Set the flags for arithmetic operations taking into account carry using the before and after values
-    fn set_flags_for_aritmethic(&mut self, before: u8, after: u8, carry: bool) {
+    fn set_flags_for_arithmetic(&mut self, before: u8, after: u8, carry: bool) {
         self.set_flag(Z, after == 0);
         self.set_flag(S, ((after & 0b1000_0000) >> 7) == 1);
         self.set_flag(
