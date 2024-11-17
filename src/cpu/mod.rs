@@ -731,16 +731,12 @@ impl Cpu {
                 self.set_register_pair(HL, self.get_register_pair(DE));
                 1
             }
-            Output(data) => {
-                #[cfg(debug_assertions)]
-                eprintln!("Output {}", data);
-                self.set_bus(data as usize, self.get_register(A));
+            Output(port) => {
+                self.set_bus(port as usize, self.get_register(A));
                 3
             }
-            Input(data) => {
-                #[cfg(debug_assertions)]
-                eprintln!("Input {}", data);
-                self.set_register(A, self.get_bus(data as usize));
+            Input(port) => {
+                self.set_register(A, self.get_bus(port as usize));
                 3
             }
             MoveFromMemory(r) => {
@@ -816,8 +812,8 @@ impl Cpu {
 
         #[cfg(debug_assertions)]
         eprintln!(
-            "     pc: {:04X}, sp: {:04X}, reg: {:02X?}",
-            self.pc, self.sp, self.registers
+            "     pc: {:04X}, sp: {:04X}, regs: {:02X?}, bus: {:02X?}, intr: {}",
+            self.pc, self.sp, self.registers, self.bus, self.interruptable
         );
 
         cycles
