@@ -13,13 +13,10 @@ use sdl2::{
     render::BlendMode,
 };
 
-use crate::cpu::{Cpu, DISPLAY_HEIGHT, DISPLAY_WIDTH};
+use crate::{cpu::Cpu, DISPLAY_HEIGHT, DISPLAY_WIDTH, FPS, FREQ};
 
 #[cfg(test)]
 mod tests;
-
-pub const FPS: u32 = 60;
-pub const FREQ: u32 = 1_996_800; // ~ 2 MHz CPU
 
 /// Options for the emulator
 #[derive(Debug)]

@@ -78,6 +78,26 @@ fn set_flags() {
     assert_eq!(0xFF, cpu.get_flags());
 }
 
+#[test]
+fn get_bus() {
+    let mut cpu = setup();
+    cpu.bus = [0, 1, 2, 3, 4, 5, 6, 7];
+    for port in 0..NPORTS {
+        assert_eq!(port as u8, cpu.get_bus(port));
+    }
+}
+
+#[test]
+fn set_bus() {
+    let mut cpu = setup();
+
+    for port in 0..NPORTS {
+        assert_eq!(0, cpu.get_bus(port));
+        cpu.set_bus(port, 0xAB);
+        assert_eq!(0xAB, cpu.get_bus(port));
+    }
+}
+
 // Test CPU operations
 
 #[test]
@@ -552,5 +572,27 @@ fn and_register() {
         assert_eq!(1, cpu.execute(AndRegister(r)));
         assert_eq!(0b0000_1010, cpu.get_register(A));
         assert!(!cpu.get_flag(CY));
+    }
+}
+
+#[test]
+fn input() {
+    let mut cpu = setup();
+    for port in 0..NPORTS {
+        assert_eq!(0, cpu.get_bus(port));
+        cpu.set_bus(port, (port + 1) as u8);
+        assert_eq!(3, cpu.execute(Input(port as u8)));
+        assert_eq!((port + 1) as u8, cpu.get_register(A));
+    }
+}
+
+#[test]
+fn output() {
+    let mut cpu = setup();
+    for port in 0..NPORTS {
+        assert_eq!(0, cpu.get_bus(port));
+        cpu.set_register(A, (port + 1) as u8);
+        assert_eq!(3, cpu.execute(Output(port as u8)));
+        assert_eq!((port + 1) as u8, cpu.get_bus(port));
     }
 }

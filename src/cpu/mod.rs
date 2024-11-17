@@ -1,6 +1,6 @@
 //! CPU module
 
-use crate::utils::*;
+use crate::{utils::*, DISPLAY_HEIGHT, MEMORY_SIZE, NPORTS, NREGS};
 use Condition::*;
 use Flag::*;
 use Instruction::*;
@@ -9,9 +9,6 @@ use RegisterPair::*;
 
 #[cfg(test)]
 mod tests;
-
-pub const DISPLAY_WIDTH: u32 = 224;
-pub const DISPLAY_HEIGHT: u32 = 256;
 
 // Type aliases to match terminology in manual
 type Address = usize;
@@ -217,9 +214,6 @@ enum Flag {
     AC = 4,
 }
 
-const MEMORY_SIZE: usize = 0x4000;
-const NREGS: usize = 8;
-
 /// The CPU-model including memory etc.
 pub struct Cpu {
     /// ROM/RAM all writable for now
@@ -230,8 +224,8 @@ pub struct Cpu {
     registers: [Data; NREGS],
     /// Stack pointer/register pair SP
     sp: Address,
-    /// Output
-    output: Vec<Data>,
+    /// 8-bit bi-directional bus for I/O
+    bus: [Data; NPORTS],
     /// CPU interruptable
     interruptable: bool,
     /// Display should be updated (this is set to true on memory writes to the framebuffer region of memory, then emulator clears it after drawing is finished)
@@ -249,7 +243,7 @@ impl Cpu {
             pc: 0,
             registers: [0; NREGS],
             sp: 0,
-            output: vec![],
+            bus: [0; NPORTS],
             interruptable: false,
             display_update: true,
         }
@@ -738,10 +732,15 @@ impl Cpu {
                 1
             }
             Output(data) => {
-                self.output.push(data);
-
                 #[cfg(debug_assertions)]
-                eprintln!("TODO Output {}", data);
+                eprintln!("Output {}", data);
+                self.set_bus(data as usize, self.get_register(A));
+                3
+            }
+            Input(data) => {
+                #[cfg(debug_assertions)]
+                eprintln!("Input {}", data);
+                self.set_register(A, self.get_bus(data as usize));
                 3
             }
             MoveFromMemory(r) => {
@@ -986,5 +985,15 @@ impl Cpu {
 
     fn peek_data(&self) -> Data {
         self.get_memory(self.sp)
+    }
+
+    /// Get port
+    fn get_bus(&self, port: usize) -> Data {
+        self.bus[port]
+    }
+
+    /// Set port
+    fn set_bus(&mut self, port: usize, data: Data) {
+        self.bus[port] = data;
     }
 }
