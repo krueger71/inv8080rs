@@ -198,11 +198,17 @@ impl Emu {
             // Run correct number of cycles, generate interrupts etc
             let mut cycles: u32 = 0;
 
+            let mut halfway = false;
             while cycles < cycles_per_frame {
                 cycles += self.cpu.step();
                 // Interrupts should happen in the middle of frame and at the end
+                if !halfway && (cycles > cycles_per_frame / 2) {
+                    cycles += self.cpu.interrupt(8);
+                    halfway = true;
+                }
             }
-
+            self.cpu.interrupt(10);
+            
             if self.cpu.display_update {
                 canvas.set_draw_color(background_color);
                 canvas.clear();

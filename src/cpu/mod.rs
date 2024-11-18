@@ -597,9 +597,6 @@ impl Cpu {
             _ => Err(op), // 12 values unused
         };
 
-        #[cfg(debug_assertions)]
-        eprintln!("{:04X?}", instr);
-
         instr
     }
 
@@ -628,6 +625,9 @@ impl Cpu {
 
     /// Execute one instruction and return number of cycles taken
     fn execute(&mut self, instr: Instruction) -> u32 {
+        #[cfg(debug_assertions)]
+        eprintln!("{:04X?}", instr);
+
         let cycles = match instr {
             NoOperation => 1,
             Jump(addr) => {
@@ -824,6 +824,22 @@ impl Cpu {
         cycles
     }
 
+    /// Interrupt
+    pub fn interrupt(&mut self, data: Data) -> u32 {
+        #[cfg(debug_assertions)]
+        eprint!("{:04X} ** ******** ", self.pc);
+        if self.interruptable {
+            self.interruptable = false; // TODO Should this be done?
+            self.execute(Restart(data))
+        } else {
+            #[cfg(debug_assertions)]
+            eprintln!(
+                "Interrupted with {} when not in an interruptable state!",
+                data
+            );
+            0
+        }
+    }
     // CPU "micro-code" below
 
     /// Get memory
