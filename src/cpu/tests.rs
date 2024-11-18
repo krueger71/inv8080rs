@@ -492,6 +492,19 @@ fn rotate_right() {
 }
 
 #[test]
+fn rotate_right_through_carry() {
+    let mut cpu = setup();
+    cpu.set_register(A, 0b1000_0001);
+    cpu.set_flags(0);
+    assert_eq!(1, cpu.execute(RotateRightThroughCarry));
+    assert_eq!(0b0100_0000, cpu.get_register(A));
+    assert_eq!(true, cpu.get_flag(CY));
+    assert_eq!(1, cpu.execute(RotateRightThroughCarry));
+    assert_eq!(0b1010_0000, cpu.get_register(A));
+    assert_eq!(false, cpu.get_flag(CY));
+}
+
+#[test]
 fn and_immediate() {
     let mut cpu = setup();
     cpu.set_register(A, 0b1010_1010);
