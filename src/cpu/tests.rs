@@ -596,3 +596,17 @@ fn output() {
         assert_eq!((port + 1) as u8, cpu.get_bus(port));
     }
 }
+
+#[test]
+fn restart() {
+    let mut cpu = setup();
+    cpu.sp = 2;
+    cpu.pc = 0x1234;
+    assert_eq!(3, cpu.execute(Restart(0xff)));
+    assert_eq!(cpu.pc, 0x7f8);
+    assert_eq!(cpu.sp, 0);
+    assert_eq!(cpu.memory[cpu.sp + 1], 0x12);
+    assert_eq!(cpu.memory[cpu.sp], 0x34);
+    assert_eq!(cpu.registers, [0; NREGS]);
+    assert_eq!(cpu.get_flags(), 0);
+}

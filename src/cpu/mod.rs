@@ -807,6 +807,11 @@ impl Cpu {
                 eprintln!("Enable interrupts");
                 1
             }
+            Restart(data) => {
+                self.push(self.pc);
+                self.pc = (8 * data as i32) as Address;
+                3
+            }
             _ => panic!("Unimplemented {:04X?}", instr),
         };
 
