@@ -15,10 +15,31 @@ fn get_memory() {
 }
 
 #[test]
+#[should_panic]
+fn get_memory_too_high() {
+    let cpu = setup();
+    cpu.get_memory(0x4000);
+}
+
+#[test]
 fn set_memory() {
     let mut cpu = setup();
-    cpu.set_memory(0xFF, 0xAB);
-    assert_eq!(0xAB, cpu.memory[0xFF]);
+    cpu.set_memory(0x2000, 0xAB);
+    assert_eq!(0xAB, cpu.memory[0x2000]);
+}
+
+#[test]
+#[should_panic]
+fn set_memory_too_low() {
+    let mut cpu = setup();
+    cpu.set_memory(0x1FFF, 0xAB);
+}
+
+#[test]
+#[should_panic]
+fn set_memory_too_high() {
+    let mut cpu = setup();
+    cpu.set_memory(0x4000, 0xAB);
 }
 
 #[test]
@@ -168,13 +189,13 @@ fn move_immediate() {
 #[test]
 fn call() {
     let mut cpu = setup();
-    cpu.sp = 2;
+    cpu.sp = 0x23FF;
     cpu.pc = 0x1234;
-    assert_eq!(5, cpu.execute(Call(0x2345)));
-    assert_eq!(cpu.pc, 0x2345);
-    assert_eq!(cpu.sp, 0);
-    assert_eq!(cpu.memory[cpu.sp + 1], 0x12);
-    assert_eq!(cpu.memory[cpu.sp], 0x34);
+    assert_eq!(5, cpu.execute(Call(0x1567)));
+    assert_eq!(cpu.pc, 0x1567);
+    assert_eq!(cpu.sp, 0x23FD);
+    assert_eq!(cpu.get_memory(cpu.sp + 1), 0x12);
+    assert_eq!(cpu.get_memory(cpu.sp), 0x34);
     assert_eq!(cpu.registers, [0; NREGS]);
     assert_eq!(cpu.get_flags(), 0);
 }
@@ -227,13 +248,13 @@ fn move_to_memory() {
     let mut cpu = setup();
     let mut v = 1u8;
     for r in [B, C, D, E, A] {
-        cpu.set_register(H, 1);
+        cpu.set_register(H, 0x20);
         cpu.set_register(L, v);
         cpu.set_register(r, v + 1);
         assert_eq!(2, cpu.execute(MoveToMemory(r)));
         assert_eq!(cpu.pc, 0);
         assert_eq!(cpu.sp, 0);
-        assert_eq!(cpu.memory[0x100usize | v as usize], v + 1);
+        assert_eq!(cpu.memory[0x2000usize | v as usize], v + 1);
         assert_eq!(cpu.get_flags(), 0);
         v += 1;
     }
@@ -272,6 +293,20 @@ fn decrement_register() {
 }
 
 #[test]
+fn increment_register() {
+    let mut cpu = setup();
+    for r in [B, C, D, E, H, L, A] {
+        cpu.set_register(r, 0);
+        assert_eq!(1, cpu.execute(IncrementRegister(r)));
+        assert_eq!(cpu.get_flag(Z), false);
+        assert_eq!(cpu.get_flag(S), false);
+        assert_eq!(cpu.get_flag(P), false);
+        assert_eq!(cpu.get_flag(CY), false);
+        assert_eq!(cpu.get_flag(AC), false);
+    }
+}
+
+#[test]
 fn conditional_jump() {
     let mut cpu = setup();
     assert_eq!(3, cpu.execute(ConditionalJump(NotZero, 0x0001)));
@@ -295,8 +330,9 @@ fn conditional_jump() {
 #[test]
 fn move_to_memory_immediate() {
     let mut cpu = setup();
+    cpu.set_register_pair(HL, 0x2000);
     assert_eq!(3, cpu.execute(MoveToMemoryImmediate(0xFE)));
-    assert_eq!(cpu.memory[0], 0xFE);
+    assert_eq!(cpu.get_memory(0x2000), 0xFE);
 }
 
 #[test]
@@ -332,7 +368,7 @@ fn compare_immediate() {
 #[test]
 fn push() {
     let mut cpu = setup();
-    cpu.sp = 0xF;
+    cpu.sp = 0x23FF;
     let mut v = 0xA1;
     for rp in [BC, DE, HL] {
         cpu.set_register_pair(rp, v);
@@ -455,9 +491,9 @@ fn push_processor_status_word() {
     let mut cpu = setup();
     cpu.set_flags(0xFF);
     cpu.set_register(A, 0xAB);
-    cpu.sp = 0xFF;
+    cpu.sp = 0x23FF;
     assert_eq!(3, cpu.execute(PushProcessorStatusWord));
-    assert_eq!(0xFD, cpu.sp);
+    assert_eq!(0x23FD, cpu.sp);
     assert_eq!(0b1111_1111, cpu.pop_data()); // Flags
     assert_eq!(0xAB, cpu.pop_data()); // A register
 }
@@ -467,14 +503,14 @@ fn pop_processor_status_word() {
     let mut cpu = setup();
     cpu.set_flags(0xFF);
     cpu.set_register(A, 0xAB);
-    cpu.sp = 0xFF;
+    cpu.sp = 0x23FF;
     cpu.execute(PushProcessorStatusWord);
     cpu.set_flags(0);
     cpu.set_register(A, 0);
     assert_eq!(3, cpu.execute(PopProcessorStatusWord));
     assert_eq!(0xFF, cpu.get_flags());
     assert_eq!(0xAB, cpu.get_register(A));
-    assert_eq!(0xFF, cpu.sp);
+    assert_eq!(0x23FF, cpu.sp);
 }
 
 #[test]
@@ -530,7 +566,7 @@ fn add_immediate() {
 #[test]
 fn load_accumulator_direct() {
     let mut cpu = setup();
-    let addr = MEMORY_SIZE - 1;
+    let addr = *RAM.start();
     cpu.set_memory(addr, 0xAB);
     assert_eq!(4, cpu.execute(LoadAccumulatorDirect(addr)));
     assert_eq!(0xAB, cpu.get_register(A));
@@ -539,7 +575,7 @@ fn load_accumulator_direct() {
 #[test]
 fn store_accumulator_direct() {
     let mut cpu = setup();
-    let addr = MEMORY_SIZE - 1;
+    let addr = 0x2000;
     cpu.set_register(A, 0xAB);
     assert_eq!(4, cpu.execute(StoreAccumulatorDirect(addr)));
     assert_eq!(0xAB, cpu.get_memory(addr));
@@ -613,11 +649,11 @@ fn output() {
 #[test]
 fn restart() {
     let mut cpu = setup();
-    cpu.sp = 2;
+    cpu.sp = 0x23FF;
     cpu.pc = 0x1234;
-    assert_eq!(3, cpu.execute(Restart(0xff)));
-    assert_eq!(cpu.pc, 0x7f8);
-    assert_eq!(cpu.sp, 0);
+    assert_eq!(3, cpu.execute(Restart(0xFF)));
+    assert_eq!(cpu.pc, 0x7F8);
+    assert_eq!(cpu.sp, 0x23FD);
     assert_eq!(cpu.memory[cpu.sp + 1], 0x12);
     assert_eq!(cpu.memory[cpu.sp], 0x34);
     assert_eq!(cpu.registers, [0; NREGS]);

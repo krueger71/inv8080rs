@@ -208,7 +208,7 @@ impl Emu {
                 }
             }
             self.cpu.interrupt(10);
-            
+
             if self.cpu.display_update {
                 canvas.set_draw_color(background_color);
                 canvas.clear();

@@ -1,6 +1,6 @@
 //! CPU module
 
-use crate::{utils::*, DISPLAY_HEIGHT, MEMORY_SIZE, NPORTS, NREGS};
+use crate::{utils::*, DISPLAY_HEIGHT, FRAMEBUFFER, MEMORY, MEMORY_SIZE, NPORTS, NREGS, RAM};
 use Condition::*;
 use Flag::*;
 use Instruction::*;
@@ -273,7 +273,7 @@ impl Cpu {
         self.pc += 1;
 
         // Decoding in the order from the manual
-        let instr = match op {
+        match op {
             // Data Transfer Group
             0b01_000_000 => MoveRegister(B, B),
             0b01_000_001 => MoveRegister(B, C),
@@ -595,9 +595,7 @@ impl Cpu {
 
             0b00000000 => NoOperation,
             _ => Err(op), // 12 values unused
-        };
-
-        instr
+        }
     }
 
     /// Fetch one byte from memory and advance program counter
@@ -674,6 +672,13 @@ impl Cpu {
             DecrementRegister(r) => {
                 let before = self.get_register(r);
                 let (after, carry) = before.overflowing_sub(1);
+                self.set_register(r, after);
+                self.set_flags_for_arithmetic(before, after, carry);
+                1
+            }
+            IncrementRegister(r) => {
+                let before = self.get_register(r);
+                let (after, carry) = before.overflowing_add(1);
                 self.set_register(r, after);
                 self.set_flags_for_arithmetic(before, after, carry);
                 1
@@ -853,12 +858,21 @@ impl Cpu {
 
     /// Get memory
     fn get_memory(&self, addr: Address) -> Data {
+        debug_assert!(
+            MEMORY.contains(&addr),
+            "Reading outside memory at {:02X}",
+            addr
+        );
         self.memory[addr]
     }
 
     /// Set memory
     fn set_memory(&mut self, addr: Address, data: Data) {
+        debug_assert!(RAM.contains(&addr), "Writing outside ram at {:02X}!", addr);
         self.memory[addr] = data;
+        if FRAMEBUFFER.contains(&addr) {
+            self.display_update = true;
+        }
     }
 
     /// Get register
