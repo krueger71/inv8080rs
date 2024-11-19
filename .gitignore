@@ -1,4 +1,5 @@
 /target
 /roms
+/docs
 .DS_Store
 invaders.zip
