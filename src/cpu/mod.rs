@@ -1,6 +1,6 @@
 //! CPU module
 
-use crate::{utils::*, DISPLAY_HEIGHT, FRAMEBUFFER, MEMORY, MEMORY_SIZE, NPORTS, NREGS, RAM};
+use crate::{utils::*, DISPLAY_HEIGHT, FRAMEBUFFER, MEMORY, MEMORY_SIZE, NPORTS, NREGS, RAM, ROM};
 use Condition::*;
 use Flag::*;
 use Instruction::*;
@@ -265,12 +265,12 @@ impl Cpu {
 
     #[allow(clippy::unusual_byte_groupings)]
     fn fetch_and_decode(&mut self) -> Instruction {
-        let op = self.get_memory(self.pc);
+        let op = self.get_memory(self.get_pc());
 
         #[cfg(debug_assertions)]
-        eprint!("{:04X} {:02X} {:08b} ", self.pc, op, op);
+        eprint!("{:04X} {:02X} {:08b} ", self.get_pc(), op, op);
 
-        self.pc += 1;
+        self.incr_pc();
 
         // Decoding in the order from the manual
         match op {
@@ -600,18 +600,18 @@ impl Cpu {
 
     /// Fetch one byte from memory and advance program counter
     fn fetch_data(&mut self) -> Data {
-        let ret = self.get_memory(self.pc);
-        self.pc += 1;
+        let ret = self.get_memory(self.get_pc());
+        self.incr_pc();
 
         ret
     }
 
     /// Fetch two bytes from memory and advance program counter
     fn fetch_data16(&mut self) -> Data16 {
-        let low = self.get_memory(self.pc) as Data16;
-        self.pc += 1;
-        let high = self.get_memory(self.pc) as Data16;
-        self.pc += 1;
+        let low = self.get_memory(self.get_pc()) as Data16;
+        self.incr_pc();
+        let high = self.get_memory(self.get_pc()) as Data16;
+        self.incr_pc();
 
         (high << 8) | low
     }
@@ -629,7 +629,7 @@ impl Cpu {
         let cycles = match instr {
             NoOperation => 1,
             Jump(addr) => {
-                self.pc = addr;
+                self.set_pc(addr);
                 3
             }
             LoadRegisterPairImmediate(rp, data) => {
@@ -641,12 +641,13 @@ impl Cpu {
                 2
             }
             Call(addr) => {
-                self.push(self.pc);
-                self.pc = addr;
+                self.push(self.get_pc());
+                self.set_pc(addr);
                 5
             }
             Return => {
-                self.pc = self.pop();
+                let addr = self.pop();
+                self.set_pc(addr);
                 3
             }
             LoadAccumulatorIndirect(rp) => {
@@ -685,7 +686,7 @@ impl Cpu {
             }
             ConditionalJump(c, addr) => {
                 if self.is_condition(c) {
-                    self.pc = addr;
+                    self.set_pc(addr);
                 }
                 3
             }
@@ -822,8 +823,8 @@ impl Cpu {
                 1
             }
             Restart(data) => {
-                self.push(self.pc);
-                self.pc = (8 * data as i32) as Address;
+                self.push(self.get_pc());
+                self.set_pc((8 * data as i32) as Address);
                 3
             }
             _ => panic!("Unimplemented {:04X?}", instr),
@@ -854,7 +855,24 @@ impl Cpu {
             0
         }
     }
+
     // CPU "micro-code" below
+
+    /// Get pc
+    fn get_pc(&self) -> usize {
+        self.pc
+    }
+
+    /// Set pc
+    fn set_pc(&mut self, pc: usize) {
+        debug_assert!(ROM.contains(&pc), "Program counter {:04X} outside ROM!", pc);
+        self.pc = pc;
+    }
+
+    /// Increment pc
+    fn incr_pc(&mut self) {
+        self.set_pc(self.get_pc() + 1);
+    }
 
     /// Get memory
     fn get_memory(&self, addr: Address) -> Data {
