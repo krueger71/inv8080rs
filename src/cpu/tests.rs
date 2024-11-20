@@ -100,6 +100,21 @@ fn set_flags() {
 }
 
 #[test]
+fn set_flags_for_arithmetic() {
+    let mut cpu = setup();
+
+    for cy in [false, true] {
+        cpu.set_flags(0);
+        cpu.set_flags_for_arithmetic(0, 0, cy);
+        assert_eq!(true, cpu.get_flag(Z));
+        assert_eq!(true, cpu.get_flag(P));
+        assert_eq!(cy, cpu.get_flag(CY));
+        assert_eq!(false, cpu.get_flag(AC));
+        assert_eq!(false, cpu.get_flag(S));
+    }
+}
+
+#[test]
 fn get_bus() {
     let mut cpu = setup();
     cpu.bus = [0, 1, 2, 3, 4, 5, 6, 7];
