@@ -671,16 +671,16 @@ impl Cpu {
             }
             DecrementRegister(r) => {
                 let before = self.get_register(r);
-                let (after, carry) = before.overflowing_sub(1);
+                let (after, _) = before.overflowing_sub(1);
                 self.set_register(r, after);
-                self.set_flags_for_arithmetic(before, after, carry);
+                self.set_flags_for_arithmetic(before, after, self.get_flag(CY));
                 1
             }
             IncrementRegister(r) => {
                 let before = self.get_register(r);
-                let (after, carry) = before.overflowing_add(1);
+                let (after, _) = before.overflowing_add(1);
                 self.set_register(r, after);
-                self.set_flags_for_arithmetic(before, after, carry);
+                self.set_flags_for_arithmetic(before, after, self.get_flag(CY));
                 1
             }
             ConditionalJump(c, addr) => {
