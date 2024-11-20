@@ -11,7 +11,7 @@ pub const ROM: RangeInclusive<usize> = 0..=0x1FFF;
 /// RAM memory range
 pub const RAM: RangeInclusive<usize> = 0x2000..=0x3FFF;
 /// Stack memory range (really should be no more than 16 levels), grows downward in memory
-pub const STACK: RangeInclusive<usize> = 0x23FF..=0x2300;
+pub const STACK: RangeInclusive<usize> = 0x2300..=0x23FF;
 /// Framebuffer memory range
 pub const FRAMEBUFFER: RangeInclusive<usize> = 0x2400..=0x3FFF;
 
