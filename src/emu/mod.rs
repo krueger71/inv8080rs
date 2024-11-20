@@ -230,7 +230,7 @@ impl Emu {
                 #[cfg(debug_assertions)]
                 eprintln!("Display updated");
 
-                //self.cpu.display_update = false; // Cpu will set this to true whenever something changes on screen
+                self.cpu.display_update = false; // Cpu will set this to true whenever something changes on screen
             }
 
             let sleep_duration =
