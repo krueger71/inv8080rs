@@ -203,11 +203,11 @@ impl Emu {
                 cycles += self.cpu.step();
                 // Interrupts should happen in the middle of frame and at the end
                 if !halfway && (cycles > cycles_per_frame / 2) {
-                    cycles += self.cpu.interrupt(8);
+                    cycles += self.cpu.interrupt(1);
                     halfway = true;
                 }
             }
-            self.cpu.interrupt(10);
+            self.cpu.interrupt(2);
 
             if self.cpu.display_update {
                 canvas.set_draw_color(background_color);
