@@ -698,6 +698,15 @@ impl Cpu {
                 }
                 3
             }
+            ConditionalReturn(c) => {
+                if self.is_condition(c) {
+                    let addr = self.pop();
+                    self.set_pc(addr);
+                    3
+                } else {
+                    1
+                }
+            }
             MoveToMemoryImmediate(data) => {
                 self.set_memory(self.get_register_pair(HL) as Address, data);
                 3

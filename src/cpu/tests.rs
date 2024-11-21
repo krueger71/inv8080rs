@@ -1,3 +1,5 @@
+use crate::STACK;
+
 use super::*;
 
 /// Return a Cpu in a default state (zero/unset)
@@ -369,6 +371,34 @@ fn conditional_jump() {
     assert_eq!(cpu.get_pc(), 0x0004);
     assert_eq!(3, cpu.execute(ConditionalJump(Minus, 0x0005)));
     assert_eq!(cpu.get_pc(), 0x0004);
+}
+
+#[test]
+fn conditional_return() {
+    let mut cpu = setup();
+    cpu.sp = *STACK.end();
+
+    for (condition, flag, value) in [
+        (NotZero, Z, false),
+        (Zero, Z, true),
+        (NoCarry, CY, false),
+        (Carry, CY, true),
+        (ParityOdd, P, false),
+        (ParityEven, P, true),
+        (Plus, S, false),
+        (Minus, S, true),
+    ] {
+        cpu.set_pc(0);
+        cpu.push(0x1FAB);
+        cpu.set_flag(flag, value);
+        assert_eq!(3, cpu.execute(ConditionalReturn(condition)));
+        assert_eq!(0x1FAB, cpu.get_pc());
+        cpu.set_pc(0);
+        cpu.push(0x1FAB);
+        cpu.set_flag(flag, !value);
+        assert_eq!(1, cpu.execute(ConditionalReturn(condition)));
+        assert_eq!(0, cpu.get_pc());
+    }
 }
 
 #[test]
