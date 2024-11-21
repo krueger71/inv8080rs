@@ -326,12 +326,28 @@ fn increment_register() {
     for r in [B, C, D, E, H, L, A] {
         cpu.set_register(r, 0);
         assert_eq!(1, cpu.execute(IncrementRegister(r)));
+        assert_eq!(1, cpu.get_register(r));
         assert_eq!(cpu.get_flag(Z), false);
         assert_eq!(cpu.get_flag(S), false);
         assert_eq!(cpu.get_flag(P), false);
         assert_eq!(cpu.get_flag(CY), false);
         assert_eq!(cpu.get_flag(AC), false);
     }
+}
+
+#[test]
+fn decrement_memory() {
+    let mut cpu = setup();
+    let addr = *RAM.start();
+    cpu.set_register_pair(HL, addr as u16);
+    cpu.set_memory(addr, 1);
+    assert_eq!(3, cpu.execute(DecrementMemory));
+    assert_eq!(0, cpu.get_memory(addr));
+    assert_eq!(cpu.get_flag(Z), true);
+    assert_eq!(cpu.get_flag(S), false);
+    assert_eq!(cpu.get_flag(P), true);
+    assert_eq!(cpu.get_flag(CY), false);
+    assert_eq!(cpu.get_flag(AC), false);
 }
 
 #[test]

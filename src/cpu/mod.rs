@@ -684,6 +684,14 @@ impl Cpu {
                 self.set_flags_for_arithmetic(before, after, self.get_flag(CY));
                 1
             }
+            DecrementMemory => {
+                let addr = self.get_register_pair(HL) as Address;
+                let before = self.get_memory(addr);
+                let (after, _) = before.overflowing_sub(1);
+                self.set_memory(addr, after);
+                self.set_flags_for_arithmetic(before, after, self.get_flag(CY));
+                3
+            }
             ConditionalJump(c, addr) => {
                 if self.is_condition(c) {
                     self.set_pc(addr);
