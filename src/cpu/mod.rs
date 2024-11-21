@@ -830,12 +830,14 @@ impl Cpu {
             }
             DisableInterrupts => {
                 self.interruptable = false;
+                #[cfg(debug_assertions)]
                 eprintln!("Disable interrupts");
                 1
             }
             EnableInterrupts => {
                 // TODO The CPU should be interruptable following the next instruction
                 self.interruptable = true;
+                #[cfg(debug_assertions)]
                 eprintln!("Enable interrupts");
                 1
             }
@@ -843,6 +845,10 @@ impl Cpu {
                 self.push(self.get_pc());
                 self.set_pc((8 * data as i32) as Address);
                 3
+            }
+            SetCarry => {
+                self.set_flag(CY, true);
+                1
             }
             _ => panic!("Unimplemented {:04X?}", instr),
         };

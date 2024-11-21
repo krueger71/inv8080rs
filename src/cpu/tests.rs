@@ -524,6 +524,13 @@ fn move_from_memory() {
     }
 }
 
+#[test]
+fn set_carry() {
+    let mut cpu = setup();
+    assert_eq!(1, cpu.execute(SetCarry));
+    assert!(cpu.get_flag(CY));
+}
+
 // Test helper functions/"micro-code" below
 
 #[test]
