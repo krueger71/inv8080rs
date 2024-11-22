@@ -10,3 +10,10 @@ edition = "2021"
 
 [dependencies]
 sdl2 = "*"
+
+# Some optimizations for dev builds (from Bevvy docs)
+[profile.dev]
+opt-level = 1
+
+[profile.dev.package."*"]
+opt-level = 3
