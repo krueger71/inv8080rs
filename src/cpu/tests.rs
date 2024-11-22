@@ -507,9 +507,11 @@ fn add_register_pair_to_hl() {
 #[test]
 fn exchange_hl_with_de() {
     let mut cpu = setup();
+    cpu.set_register_pair(HL, 0x1234);
     cpu.set_register_pair(DE, 0xABCD);
     assert_eq!(1, cpu.execute(ExchangeHLWithDE));
     assert_eq!(0xABCD, cpu.get_register_pair(HL));
+    assert_eq!(0x1234, cpu.get_register_pair(DE));
 }
 
 #[test]

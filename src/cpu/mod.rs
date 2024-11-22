@@ -751,7 +751,9 @@ impl Cpu {
                 3
             }
             ExchangeHLWithDE => {
+                let hl = self.get_register_pair(HL);
                 self.set_register_pair(HL, self.get_register_pair(DE));
+                self.set_register_pair(DE, hl);
                 1
             }
             Output(port) => {
