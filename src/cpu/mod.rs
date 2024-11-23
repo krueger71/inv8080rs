@@ -786,6 +786,12 @@ impl Cpu {
                 self.set_register(A, acc.rotate_right(1));
                 1
             }
+            RotateLeft => {
+                let acc = self.get_register(A);
+                self.set_flag(CY, get_bit(acc, 7));
+                self.set_register(A, acc.rotate_left(1));
+                1
+            }
             RotateRightThroughCarry => {
                 let mut acc = self.get_register(A);
                 let low = get_bit(acc, 0);
