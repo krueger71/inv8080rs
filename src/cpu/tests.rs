@@ -862,6 +862,18 @@ fn or_register() {
 }
 
 #[test]
+fn or_immediate() {
+    let mut cpu = setup();
+    cpu.set_register(A, 0b1010_1010);
+    cpu.set_flag(AC, true);
+    cpu.set_flag(CY, true);
+    assert_eq!(2, cpu.execute(OrImmediate(0b0101_0101)));
+    assert_eq!(0b1111_1111, cpu.get_register(A));
+    assert!(!cpu.get_flag(CY));
+    assert!(!cpu.get_flag(AC));
+}
+
+#[test]
 fn load_hl_direct() {
     let mut cpu = setup();
     cpu.set_memory(*RAM.start(), 0xCD);
