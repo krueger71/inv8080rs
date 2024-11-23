@@ -175,20 +175,20 @@ impl Emu {
                         scancode: Some(scancode),
                         ..
                     } => {
-                        if let Some(keycode) = self.keymap(scancode) {
+                        if let Some(_keycode) = self.keymap(scancode) {
                             // Handle the key down
                             #[cfg(debug_assertions)]
-                            eprintln!("Key {:0x} down", keycode);
+                            eprintln!("Key {:0x} down", _keycode);
                         }
                     }
                     Event::KeyUp {
                         scancode: Some(scancode),
                         ..
                     } => {
-                        if let Some(keycode) = self.keymap(scancode) {
+                        if let Some(_keycode) = self.keymap(scancode) {
                             // Handle the key up
                             #[cfg(debug_assertions)]
-                            eprintln!("Key {:0x} up", keycode);
+                            eprintln!("Key {:0x} up", _keycode);
                         }
                     }
                     _ => {}
