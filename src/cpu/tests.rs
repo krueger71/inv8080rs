@@ -10,7 +10,6 @@ fn setup() -> Cpu {
 // Test CPU "micro-code"
 
 #[test]
-#[should_panic]
 fn get_set_and_incr_pc() {
     let mut cpu = setup();
     assert_eq!(0, cpu.get_pc());
@@ -18,6 +17,19 @@ fn get_set_and_incr_pc() {
     assert_eq!(*ROM.end() - 1, cpu.get_pc());
     cpu.incr_pc();
     assert_eq!(*ROM.end(), cpu.get_pc());
+}
+
+#[test]
+#[should_panic]
+fn set_pc_panic_start() {
+    let mut cpu = setup();
+    cpu.set_pc(*ROM.start() - 1);
+}
+
+#[test]
+#[should_panic]
+fn set_pc_panic_end() {
+    let mut cpu = setup();
     cpu.set_pc(*ROM.end() + 1);
 }
 
@@ -32,6 +44,20 @@ fn get_and_set_sp() {
 }
 
 #[test]
+#[should_panic]
+fn set_sp_panic_start() {
+    let mut cpu = setup();
+    cpu.set_sp(*STACK.start() - 1);
+}
+
+#[test]
+#[should_panic]
+fn set_sp_panic_end() {
+    let mut cpu = setup();
+    cpu.set_sp(*STACK.end() + 1);
+}
+
+#[test]
 fn get_memory() {
     let mut cpu = setup();
     assert_eq!(0, cpu.get_memory(*RAM.start()));
@@ -41,30 +67,30 @@ fn get_memory() {
 
 #[test]
 #[should_panic]
-fn get_memory_too_high() {
+fn get_memory_end() {
     let cpu = setup();
-    cpu.get_memory(0x4000);
+    cpu.get_memory(*MEMORY.end() + 1);
 }
 
 #[test]
 fn set_memory() {
     let mut cpu = setup();
-    cpu.set_memory(0x2000, 0xAB);
-    assert_eq!(0xAB, cpu.get_memory(0x2000));
+    cpu.set_memory(*RAM.start(), 0xAB);
+    assert_eq!(0xAB, cpu.get_memory(*RAM.start()));
 }
 
 #[test]
 #[should_panic]
 fn set_memory_too_low() {
     let mut cpu = setup();
-    cpu.set_memory(0x1FFF, 0xAB);
+    cpu.set_memory(*ROM.end(), 0xAB);
 }
 
 #[test]
 #[should_panic]
 fn set_memory_too_high() {
     let mut cpu = setup();
-    cpu.set_memory(0x4000, 0xAB);
+    cpu.set_memory(*MEMORY.end() + 1, 0xAB);
 }
 
 #[test]
