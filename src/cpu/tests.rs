@@ -149,6 +149,40 @@ fn set_bus() {
     }
 }
 
+#[test]
+fn get_and_set_reg_pair() {
+    let mut cpu = setup();
+
+    for rp in [BC, DE, HL, SP] {
+        cpu.set_register_pair(rp, 0xCAFE);
+        assert_eq!(0xCAFE, cpu.get_register_pair(rp));
+    }
+}
+
+#[test]
+fn get_and_set_reg() {
+    let mut cpu = setup();
+
+    for r in [B, C, D, E, H, L, A] {
+        cpu.set_register(r, 0xFE);
+        assert_eq!(0xFE, cpu.get_register(r));
+    }
+}
+
+#[test]
+fn cond() {
+    let mut cpu = setup();
+    cpu.set_flags(0);
+    assert!(cpu.is_condition(NotZero));
+    assert!(!cpu.is_condition(Zero));
+    assert!(cpu.is_condition(NoCarry));
+    assert!(!cpu.is_condition(Carry));
+    assert!(cpu.is_condition(ParityOdd));
+    assert!(!cpu.is_condition(ParityEven));
+    assert!(cpu.is_condition(Plus));
+    assert!(!cpu.is_condition(Minus));
+}
+
 // Test CPU operations
 
 #[test]
@@ -531,42 +565,6 @@ fn set_carry() {
     let mut cpu = setup();
     assert_eq!(1, cpu.execute(SetCarry));
     assert!(cpu.get_flag(CY));
-}
-
-// Test helper functions/"micro-code" below
-
-#[test]
-fn get_and_set_reg_pair() {
-    let mut cpu = setup();
-
-    for rp in [BC, DE, HL, SP] {
-        cpu.set_register_pair(rp, 0xCAFE);
-        assert_eq!(0xCAFE, cpu.get_register_pair(rp));
-    }
-}
-
-#[test]
-fn get_and_set_reg() {
-    let mut cpu = setup();
-
-    for r in [B, C, D, E, H, L, A] {
-        cpu.set_register(r, 0xFE);
-        assert_eq!(0xFE, cpu.get_register(r));
-    }
-}
-
-#[test]
-fn cond() {
-    let mut cpu = setup();
-    cpu.set_flags(0);
-    assert!(cpu.is_condition(NotZero));
-    assert!(!cpu.is_condition(Zero));
-    assert!(cpu.is_condition(NoCarry));
-    assert!(!cpu.is_condition(Carry));
-    assert!(cpu.is_condition(ParityOdd));
-    assert!(!cpu.is_condition(ParityEven));
-    assert!(cpu.is_condition(Plus));
-    assert!(!cpu.is_condition(Minus));
 }
 
 #[test]
