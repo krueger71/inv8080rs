@@ -10,8 +10,8 @@ pub const MEMORY: RangeInclusive<usize> = 0..=0x3FFF;
 pub const ROM: RangeInclusive<usize> = 0..=0x1FFF;
 /// RAM memory range
 pub const RAM: RangeInclusive<usize> = 0x2000..=0x3FFF;
-/// Stack memory range (really should be no more than 16 levels), grows downward in memory
-pub const STACK: RangeInclusive<usize> = 0x2300..=0x23FF;
+/// Stack pointer memory range (really should be no more than 16 levels), grows downward in memory
+pub const STACK: RangeInclusive<usize> = 0x2301..=0x2400;
 /// Framebuffer memory range
 pub const FRAMEBUFFER: RangeInclusive<usize> = 0x2400..=0x3FFF;
 
