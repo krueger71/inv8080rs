@@ -157,11 +157,11 @@ fn set_flags_for_arithmetic() {
     for cy in [false, true] {
         cpu.set_flags(0);
         cpu.set_flags_for_arithmetic(0, 0, cy);
-        assert_eq!(true, cpu.get_flag(Z));
-        assert_eq!(true, cpu.get_flag(P));
+        assert!(cpu.get_flag(Z));
+        assert!(cpu.get_flag(P));
         assert_eq!(cy, cpu.get_flag(CY));
-        assert_eq!(false, cpu.get_flag(AC));
-        assert_eq!(false, cpu.get_flag(S));
+        assert!(!cpu.get_flag(AC));
+        assert!(!cpu.get_flag(S));
     }
 }
 
@@ -381,11 +381,11 @@ fn decrement_register() {
         cpu.set_register(r, 1);
         assert_eq!(1, cpu.execute(DecrementRegister(r)));
         assert_eq!(0, cpu.get_register(r));
-        assert_eq!(cpu.get_flag(Z), true);
-        assert_eq!(cpu.get_flag(S), false);
-        assert_eq!(cpu.get_flag(P), true);
-        assert_eq!(cpu.get_flag(CY), false);
-        assert_eq!(cpu.get_flag(AC), false);
+        assert!(cpu.get_flag(Z));
+        assert!(!cpu.get_flag(S));
+        assert!(cpu.get_flag(P));
+        assert!(!cpu.get_flag(CY));
+        assert!(!cpu.get_flag(AC));
         assert_eq!(1, cpu.execute(DecrementRegister(r)));
         assert_eq!(-1, cpu.get_register(r) as i8);
         //assert_eq!(cpu.get_flags(), [false, true, true, true, false]);
@@ -403,11 +403,11 @@ fn increment_register() {
         cpu.set_register(r, 0);
         assert_eq!(1, cpu.execute(IncrementRegister(r)));
         assert_eq!(1, cpu.get_register(r));
-        assert_eq!(cpu.get_flag(Z), false);
-        assert_eq!(cpu.get_flag(S), false);
-        assert_eq!(cpu.get_flag(P), false);
-        assert_eq!(cpu.get_flag(CY), false);
-        assert_eq!(cpu.get_flag(AC), false);
+        assert!(!cpu.get_flag(Z));
+        assert!(!cpu.get_flag(S));
+        assert!(!cpu.get_flag(P));
+        assert!(!cpu.get_flag(CY));
+        assert!(!cpu.get_flag(AC));
     }
 }
 
@@ -419,11 +419,11 @@ fn decrement_memory() {
     cpu.set_memory(addr, 1);
     assert_eq!(3, cpu.execute(DecrementMemory));
     assert_eq!(0, cpu.get_memory(addr));
-    assert_eq!(cpu.get_flag(Z), true);
-    assert_eq!(cpu.get_flag(S), false);
-    assert_eq!(cpu.get_flag(P), true);
-    assert_eq!(cpu.get_flag(CY), false);
-    assert_eq!(cpu.get_flag(AC), false);
+    assert!(cpu.get_flag(Z));
+    assert!(!cpu.get_flag(S));
+    assert!(cpu.get_flag(P));
+    assert!(!cpu.get_flag(CY));
+    assert!(!cpu.get_flag(AC));
 }
 
 #[test]
@@ -668,11 +668,11 @@ fn rotate_right() {
     cpu.set_flags(0);
     assert_eq!(1, cpu.execute(RotateRight));
     assert_eq!(0b1100_0000, cpu.get_register(A));
-    assert_eq!(true, cpu.get_flag(CY));
+    assert!(cpu.get_flag(CY));
     cpu.set_register(A, 0b1000_0010);
     assert_eq!(1, cpu.execute(RotateRight));
     assert_eq!(0b0100_0001, cpu.get_register(A));
-    assert_eq!(false, cpu.get_flag(CY));
+    assert!(!cpu.get_flag(CY));
 }
 
 #[test]
@@ -682,11 +682,11 @@ fn rotate_left() {
     cpu.set_flags(0);
     assert_eq!(1, cpu.execute(RotateLeft));
     assert_eq!(0b0000_0011, cpu.get_register(A));
-    assert_eq!(true, cpu.get_flag(CY));
+    assert!(cpu.get_flag(CY));
     cpu.set_register(A, 0b0100_0001);
     assert_eq!(1, cpu.execute(RotateLeft));
     assert_eq!(0b1000_0010, cpu.get_register(A));
-    assert_eq!(false, cpu.get_flag(CY));
+    assert!(!cpu.get_flag(CY));
 }
 
 #[test]
@@ -696,10 +696,10 @@ fn rotate_right_through_carry() {
     cpu.set_flags(0);
     assert_eq!(1, cpu.execute(RotateRightThroughCarry));
     assert_eq!(0b0100_0000, cpu.get_register(A));
-    assert_eq!(true, cpu.get_flag(CY));
+    assert!(cpu.get_flag(CY));
     assert_eq!(1, cpu.execute(RotateRightThroughCarry));
     assert_eq!(0b1010_0000, cpu.get_register(A));
-    assert_eq!(false, cpu.get_flag(CY));
+    assert!(!cpu.get_flag(CY));
 }
 
 #[test]
@@ -711,8 +711,8 @@ fn and_immediate() {
     cpu.set_flag(AC, true);
     assert_eq!(2, cpu.execute(AndImmediate(0b1111_0000)));
     assert_eq!(0b1010_1010 & 0b1111_0000, cpu.get_register(A));
-    assert_eq!(false, cpu.get_flag(CY));
-    assert_eq!(false, cpu.get_flag(AC));
+    assert!(!cpu.get_flag(CY));
+    assert!(!cpu.get_flag(AC));
 }
 
 #[test]
@@ -722,7 +722,7 @@ fn add_immediate() {
     cpu.set_flags(0);
     assert_eq!(2, cpu.execute(AddImmediate(1)));
     assert_eq!(0, cpu.get_register(A));
-    assert_eq!(true, cpu.get_flag(CY));
+    assert!(cpu.get_flag(CY));
 }
 
 #[test]
@@ -732,7 +732,7 @@ fn subtract_immediate() {
     cpu.set_flags(0);
     assert_eq!(2, cpu.execute(SubtractImmediate(1)));
     assert_eq!(0xFF, cpu.get_register(A));
-    assert_eq!(true, cpu.get_flag(CY));
+    assert!(cpu.get_flag(CY));
 }
 
 #[test]
