@@ -698,6 +698,15 @@ impl Cpu {
                 }
                 3
             }
+            ConditionalCall(c, addr) => {
+                if self.is_condition(c) {
+                    self.push(self.get_pc());
+                    self.set_pc(addr);
+                    5
+                } else {
+                    3
+                }
+            }
             ConditionalReturn(c) => {
                 if self.is_condition(c) {
                     let addr = self.pop();

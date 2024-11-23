@@ -408,6 +408,33 @@ fn conditional_jump() {
 }
 
 #[test]
+fn conditional_call() {
+    let mut cpu = setup();
+
+    for (condition, flag, value) in [
+        (NotZero, Z, false),
+        (Zero, Z, true),
+        (NoCarry, CY, false),
+        (Carry, CY, true),
+        (ParityOdd, P, false),
+        (ParityEven, P, true),
+        (Plus, S, false),
+        (Minus, S, true),
+    ] {
+        cpu.set_pc(0);
+        cpu.sp = *STACK.end();
+        cpu.set_flag(flag, value);
+        assert_eq!(5, cpu.execute(ConditionalCall(condition, 0x1FAB)));
+        assert_eq!(0x1FAB, cpu.get_pc());
+        assert_eq!(*STACK.end() - 2, cpu.sp);
+        cpu.set_flag(flag, !value);
+        assert_eq!(3, cpu.execute(ConditionalCall(condition, 0x1FFF)));
+        assert_eq!(0x1FAB, cpu.get_pc());
+        assert_eq!(*STACK.end() - 2, cpu.sp);
+    }
+}
+
+#[test]
 fn conditional_return() {
     let mut cpu = setup();
     cpu.sp = *STACK.end();
