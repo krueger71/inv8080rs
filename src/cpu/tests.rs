@@ -34,9 +34,9 @@ fn get_and_set_sp() {
 #[test]
 fn get_memory() {
     let mut cpu = setup();
-    assert_eq!(0, cpu.get_memory(0xFF));
-    cpu.memory[0xFF] = 0xAB;
-    assert_eq!(0xAB, cpu.get_memory(0xFF));
+    assert_eq!(0, cpu.get_memory(*RAM.start()));
+    cpu.set_memory(*RAM.start(), 0xAB);
+    assert_eq!(0xAB, cpu.get_memory(*RAM.start()));
 }
 
 #[test]
@@ -50,7 +50,7 @@ fn get_memory_too_high() {
 fn set_memory() {
     let mut cpu = setup();
     cpu.set_memory(0x2000, 0xAB);
-    assert_eq!(0xAB, cpu.memory[0x2000]);
+    assert_eq!(0xAB, cpu.get_memory(0x2000));
 }
 
 #[test]
@@ -291,9 +291,9 @@ fn ret() {
 #[test]
 fn load_accumulator_indirect() {
     let mut cpu = setup();
-    cpu.memory[0x1234] = 0x56;
-    cpu.memory[0x2345] = 0x67;
-    cpu.set_register(B, 0x12);
+    cpu.set_memory(0x2234, 0x56);
+    cpu.set_memory(0x2345, 0x67);
+    cpu.set_register(B, 0x22);
     cpu.set_register(C, 0x34);
     assert_eq!(2, cpu.execute(LoadAccumulatorIndirect(BC)));
     assert_eq!(0x56, cpu.get_register(A));
@@ -332,7 +332,7 @@ fn move_to_memory() {
         assert_eq!(2, cpu.execute(MoveToMemory(r)));
         assert_eq!(cpu.get_pc(), 0);
         assert_eq!(cpu.get_sp(), 0);
-        assert_eq!(cpu.memory[0x2000usize | v as usize], v + 1);
+        assert_eq!(cpu.get_memory(0x2000usize | v as usize), v + 1);
         assert_eq!(cpu.get_flags(), 0);
         v += 1;
     }
@@ -592,8 +592,8 @@ fn exchange_hl_with_de() {
 #[test]
 fn move_from_memory() {
     let mut cpu = setup();
-    cpu.set_register_pair(HL, 0x1234);
-    cpu.memory[0x1234] = 0xAB;
+    cpu.set_register_pair(HL, *RAM.start() as Data16);
+    cpu.set_memory(*RAM.start(), 0xAB);
     for r in [A, B, C, D, E] {
         assert_eq!(cpu.get_register(r), 0);
         assert_eq!(2, cpu.execute(MoveFromMemory(r)));
@@ -800,8 +800,8 @@ fn restart() {
     assert_eq!(3, cpu.execute(Restart(0xFF)));
     assert_eq!(cpu.get_pc(), 0x7F8);
     assert_eq!(cpu.get_sp(), *STACK.end() - 2);
-    assert_eq!(cpu.memory[cpu.get_sp() + 1], 0x12);
-    assert_eq!(cpu.memory[cpu.get_sp()], 0x34);
+    assert_eq!(cpu.get_memory(cpu.get_sp() + 1), 0x12);
+    assert_eq!(cpu.get_memory(cpu.get_sp()), 0x34);
     assert_eq!(cpu.registers, [0; NREGS]);
     assert_eq!(cpu.get_flags(), 0);
 }
