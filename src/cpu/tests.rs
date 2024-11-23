@@ -22,6 +22,16 @@ fn get_set_and_incr_pc() {
 }
 
 #[test]
+fn get_and_set_sp() {
+    let mut cpu = setup();
+    assert_eq!(0, cpu.get_sp());
+    cpu.set_sp(*STACK.end());
+    assert_eq!(*STACK.end(), cpu.get_sp());
+    cpu.set_sp(*STACK.start());
+    assert_eq!(*STACK.start(), cpu.get_sp());
+}
+
+#[test]
 fn get_memory() {
     let mut cpu = setup();
     assert_eq!(0, cpu.get_memory(0xFF));
@@ -154,8 +164,8 @@ fn get_and_set_reg_pair() {
     let mut cpu = setup();
 
     for rp in [BC, DE, HL, SP] {
-        cpu.set_register_pair(rp, 0xCAFE);
-        assert_eq!(0xCAFE, cpu.get_register_pair(rp));
+        cpu.set_register_pair(rp, *STACK.end() as Data16);
+        assert_eq!(*STACK.end() as Data16, cpu.get_register_pair(rp));
     }
 }
 
@@ -190,7 +200,7 @@ fn no_operation() {
     let mut cpu = setup();
     assert_eq!(1, cpu.execute(NoOperation));
     assert_eq!(cpu.get_pc(), 0);
-    assert_eq!(cpu.sp, 0);
+    assert_eq!(cpu.get_sp(), 0);
     assert_eq!(cpu.registers, [0; NREGS]);
     assert_eq!(cpu.get_flags(), 0);
 }
@@ -200,7 +210,7 @@ fn jump() {
     let mut cpu = setup();
     assert_eq!(3, cpu.execute(Jump(*ROM.end())));
     assert_eq!(cpu.get_pc(), *ROM.end());
-    assert_eq!(cpu.sp, 0);
+    assert_eq!(cpu.get_sp(), 0);
     assert_eq!(cpu.registers, [0; NREGS]);
     assert_eq!(cpu.get_flags(), 0);
 }
@@ -210,28 +220,31 @@ fn load_register_pair_immediate() {
     let mut cpu = setup();
     assert_eq!(3, cpu.execute(LoadRegisterPairImmediate(BC, 0xABCD)));
     assert_eq!(cpu.get_pc(), 0);
-    assert_eq!(cpu.sp, 0);
+    assert_eq!(cpu.get_sp(), 0);
     assert_eq!(cpu.registers, [0xAB, 0xCD, 0, 0, 0, 0, 0, 0]);
     assert_eq!(cpu.get_flags(), 0);
 
     cpu = setup();
     assert_eq!(3, cpu.execute(LoadRegisterPairImmediate(DE, 0xABCD)));
     assert_eq!(cpu.get_pc(), 0);
-    assert_eq!(cpu.sp, 0);
+    assert_eq!(cpu.get_sp(), 0);
     assert_eq!(cpu.registers, [0, 0, 0xAB, 0xCD, 0, 0, 0, 0]);
     assert_eq!(cpu.get_flags(), 0);
 
     cpu = setup();
     assert_eq!(3, cpu.execute(LoadRegisterPairImmediate(HL, 0xABCD)));
     assert_eq!(cpu.get_pc(), 0);
-    assert_eq!(cpu.sp, 0);
+    assert_eq!(cpu.get_sp(), 0);
     assert_eq!(cpu.registers, [0, 0, 0, 0, 0xAB, 0xCD, 0, 0]);
     assert_eq!(cpu.get_flags(), 0);
 
     cpu = setup();
-    assert_eq!(3, cpu.execute(LoadRegisterPairImmediate(SP, 0xABCD)));
+    assert_eq!(
+        3,
+        cpu.execute(LoadRegisterPairImmediate(SP, *STACK.end() as Data16))
+    );
     assert_eq!(cpu.get_pc(), 0);
-    assert_eq!(cpu.sp, 0xABCD);
+    assert_eq!(cpu.get_sp(), *STACK.end());
     assert_eq!(cpu.registers, [0; NREGS]);
     assert_eq!(cpu.get_flags(), 0);
 }
@@ -243,7 +256,7 @@ fn move_immediate() {
     for r in [B, C, D, E, H, L, A] {
         assert_eq!(2, cpu.execute(MoveImmediate(r, v)));
         assert_eq!(cpu.get_pc(), 0);
-        assert_eq!(cpu.sp, 0);
+        assert_eq!(cpu.get_sp(), 0);
         assert_eq!(cpu.get_register(r), v);
         assert_eq!(cpu.get_flags(), 0);
         v += 1;
@@ -253,13 +266,13 @@ fn move_immediate() {
 #[test]
 fn call() {
     let mut cpu = setup();
-    cpu.sp = 0x23FF;
+    cpu.set_sp(0x23FF);
     cpu.set_pc(0x1234);
     assert_eq!(5, cpu.execute(Call(0x1567)));
     assert_eq!(cpu.get_pc(), 0x1567);
-    assert_eq!(cpu.sp, 0x23FD);
-    assert_eq!(cpu.get_memory(cpu.sp + 1), 0x12);
-    assert_eq!(cpu.get_memory(cpu.sp), 0x34);
+    assert_eq!(cpu.get_sp(), 0x23FD);
+    assert_eq!(cpu.get_memory(cpu.get_sp() + 1), 0x12);
+    assert_eq!(cpu.get_memory(cpu.get_sp()), 0x34);
     assert_eq!(cpu.registers, [0; NREGS]);
     assert_eq!(cpu.get_flags(), 0);
 }
@@ -267,11 +280,12 @@ fn call() {
 #[test]
 fn ret() {
     let mut cpu = setup();
-    cpu.memory[cpu.sp] = 0xFF;
-    cpu.memory[cpu.sp + 1] = 0x1F;
+    cpu.set_sp(*STACK.start());
+    cpu.set_memory(cpu.get_sp(), 0xFF);
+    cpu.set_memory(cpu.get_sp() + 1, 0x1F);
     assert_eq!(3, cpu.execute(Return));
     assert_eq!(cpu.get_pc(), 0x1FFF);
-    assert_eq!(cpu.sp, 2);
+    assert_eq!(*STACK.start() + 2, cpu.get_sp());
 }
 
 #[test]
@@ -289,7 +303,7 @@ fn load_accumulator_indirect() {
     assert_eq!(0x67, cpu.get_register(A));
 
     assert_eq!(cpu.get_pc(), 0);
-    assert_eq!(cpu.sp, 0);
+    assert_eq!(cpu.get_sp(), 0);
     assert_eq!(cpu.get_flags(), 0);
 }
 
@@ -317,7 +331,7 @@ fn move_to_memory() {
         cpu.set_register(r, v + 1);
         assert_eq!(2, cpu.execute(MoveToMemory(r)));
         assert_eq!(cpu.get_pc(), 0);
-        assert_eq!(cpu.sp, 0);
+        assert_eq!(cpu.get_sp(), 0);
         assert_eq!(cpu.memory[0x2000usize | v as usize], v + 1);
         assert_eq!(cpu.get_flags(), 0);
         v += 1;
@@ -328,9 +342,9 @@ fn move_to_memory() {
 fn increment_register_pair() {
     let mut cpu = setup();
     for rp in [BC, DE, HL, SP] {
-        cpu.set_register_pair(rp, 0xFF);
+        cpu.set_register_pair(rp, *STACK.start() as Data16);
         assert_eq!(1, cpu.execute(IncrementRegisterPair(rp)));
-        assert_eq!(0x100, cpu.get_register_pair(rp));
+        assert_eq!(1 + (*STACK.start() as Data16), cpu.get_register_pair(rp));
     }
 }
 
@@ -422,22 +436,22 @@ fn conditional_call() {
         (Minus, S, true),
     ] {
         cpu.set_pc(0);
-        cpu.sp = *STACK.end();
+        cpu.set_sp(*STACK.end());
         cpu.set_flag(flag, value);
         assert_eq!(5, cpu.execute(ConditionalCall(condition, 0x1FAB)));
         assert_eq!(0x1FAB, cpu.get_pc());
-        assert_eq!(*STACK.end() - 2, cpu.sp);
+        assert_eq!(*STACK.end() - 2, cpu.get_sp());
         cpu.set_flag(flag, !value);
         assert_eq!(3, cpu.execute(ConditionalCall(condition, 0x1FFF)));
         assert_eq!(0x1FAB, cpu.get_pc());
-        assert_eq!(*STACK.end() - 2, cpu.sp);
+        assert_eq!(*STACK.end() - 2, cpu.get_sp());
     }
 }
 
 #[test]
 fn conditional_return() {
     let mut cpu = setup();
-    cpu.sp = *STACK.end();
+    cpu.set_sp(*STACK.end());
 
     for (condition, flag, value) in [
         (NotZero, Z, false),
@@ -503,15 +517,15 @@ fn compare_immediate() {
 #[test]
 fn push() {
     let mut cpu = setup();
-    cpu.sp = 0x23FF;
+    cpu.set_sp(*STACK.end());
     let mut v = 0xA1;
     for rp in [BC, DE, HL] {
         cpu.set_register_pair(rp, v);
-        let sp = cpu.sp;
+        let sp = cpu.get_sp();
         assert_eq!(3, cpu.execute(Push(rp)));
         assert_eq!(cpu.peek() as u16, v);
         v += 1;
-        assert_eq!(cpu.sp, sp - 2);
+        assert_eq!(cpu.get_sp(), sp - 2);
     }
 }
 
@@ -519,20 +533,20 @@ fn push() {
 #[should_panic]
 fn push_sp() {
     let mut cpu = setup();
-    cpu.sp = 0xF;
+    cpu.set_sp(*STACK.end());
     assert_eq!(3, cpu.execute(Push(SP)));
 }
 
 #[test]
 fn pop() {
     let mut cpu = setup();
-    cpu.sp = 0xF;
+    cpu.set_sp(*STACK.start());
     for rp in [BC, DE, HL] {
         cpu.set_register_pair(rp, 42);
-        let sp = cpu.sp;
+        let sp = cpu.get_sp();
         assert_eq!(3, cpu.execute(Pop(rp)));
         assert_eq!(cpu.get_register_pair(rp) as u16, 0);
-        assert_eq!(cpu.sp, sp + 2);
+        assert_eq!(cpu.get_sp(), sp + 2);
     }
 }
 
@@ -540,7 +554,7 @@ fn pop() {
 #[should_panic]
 fn pop_sp() {
     let mut cpu = setup();
-    cpu.sp = 0xF;
+    cpu.set_sp(*STACK.start());
     assert_eq!(3, cpu.execute(Pop(SP)));
 }
 
@@ -549,7 +563,7 @@ fn add_register_pair_to_hl() {
     let mut cpu = setup();
     cpu.set_register_pair(BC, 1);
     cpu.set_register_pair(DE, 2);
-    cpu.set_register_pair(SP, 4);
+    cpu.set_register_pair(SP, *STACK.end() as Data16);
     cpu.set_register_pair(HL, 0xFFFD);
     assert_eq!(3, cpu.execute(AddRegisterPairToHL(BC)));
     assert!(!cpu.get_flag(CY));
@@ -559,10 +573,10 @@ fn add_register_pair_to_hl() {
     assert_eq!(0, cpu.get_register_pair(HL));
     assert_eq!(3, cpu.execute(AddRegisterPairToHL(SP)));
     assert!(!cpu.get_flag(CY));
-    assert_eq!(4, cpu.get_register_pair(HL));
+    assert_eq!(*STACK.end() as Data16, cpu.get_register_pair(HL));
     assert_eq!(3, cpu.execute(AddRegisterPairToHL(HL)));
     assert!(!cpu.get_flag(CY));
-    assert_eq!(8, cpu.get_register_pair(HL));
+    assert_eq!(2 * (*STACK.end() as Data16), cpu.get_register_pair(HL));
 }
 
 #[test]
@@ -599,9 +613,9 @@ fn push_processor_status_word() {
     let mut cpu = setup();
     cpu.set_flags(0xFF);
     cpu.set_register(A, 0xAB);
-    cpu.sp = 0x23FF;
+    cpu.set_sp(*STACK.end());
     assert_eq!(3, cpu.execute(PushProcessorStatusWord));
-    assert_eq!(0x23FD, cpu.sp);
+    assert_eq!(*STACK.end() - 2, cpu.get_sp());
     assert_eq!(0b1111_1111, cpu.pop_data()); // Flags
     assert_eq!(0xAB, cpu.pop_data()); // A register
 }
@@ -611,14 +625,14 @@ fn pop_processor_status_word() {
     let mut cpu = setup();
     cpu.set_flags(0xFF);
     cpu.set_register(A, 0xAB);
-    cpu.sp = 0x23FF;
+    cpu.set_sp(*STACK.end());
     cpu.execute(PushProcessorStatusWord);
     cpu.set_flags(0);
     cpu.set_register(A, 0);
     assert_eq!(3, cpu.execute(PopProcessorStatusWord));
     assert_eq!(0xFF, cpu.get_flags());
     assert_eq!(0xAB, cpu.get_register(A));
-    assert_eq!(0x23FF, cpu.sp);
+    assert_eq!(*STACK.end(), cpu.get_sp());
 }
 
 #[test]
@@ -781,13 +795,13 @@ fn output() {
 #[test]
 fn restart() {
     let mut cpu = setup();
-    cpu.sp = 0x23FF;
+    cpu.set_sp(*STACK.end());
     cpu.set_pc(0x1234);
     assert_eq!(3, cpu.execute(Restart(0xFF)));
     assert_eq!(cpu.get_pc(), 0x7F8);
-    assert_eq!(cpu.sp, 0x23FD);
-    assert_eq!(cpu.memory[cpu.sp + 1], 0x12);
-    assert_eq!(cpu.memory[cpu.sp], 0x34);
+    assert_eq!(cpu.get_sp(), *STACK.end() - 2);
+    assert_eq!(cpu.memory[cpu.get_sp() + 1], 0x12);
+    assert_eq!(cpu.memory[cpu.get_sp()], 0x34);
     assert_eq!(cpu.registers, [0; NREGS]);
     assert_eq!(cpu.get_flags(), 0);
 }

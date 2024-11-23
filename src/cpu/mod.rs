@@ -1,6 +1,8 @@
 //! CPU module
 
-use crate::{utils::*, DISPLAY_HEIGHT, FRAMEBUFFER, MEMORY, MEMORY_SIZE, NPORTS, NREGS, RAM, ROM};
+use crate::{
+    utils::*, DISPLAY_HEIGHT, FRAMEBUFFER, MEMORY, MEMORY_SIZE, NPORTS, NREGS, RAM, ROM, STACK,
+};
 use Condition::*;
 use Flag::*;
 use Instruction::*;
@@ -921,20 +923,39 @@ impl Cpu {
 
     // CPU "micro-code" below
 
-    /// Get pc
+    /// Get program counter
     fn get_pc(&self) -> usize {
         self.pc
     }
 
-    /// Set pc
+    /// Set program counter
     fn set_pc(&mut self, pc: usize) {
-        debug_assert!(ROM.contains(&pc), "Program counter {:04X} outside ROM!", pc);
+        debug_assert!(
+            ROM.contains(&pc),
+            "Program counter {:04X} outside ROM memory!",
+            pc
+        );
         self.pc = pc;
     }
 
     /// Increment pc
     fn incr_pc(&mut self) {
         self.set_pc(self.get_pc() + 1);
+    }
+
+    /// Get stack pointer
+    fn get_sp(&self) -> usize {
+        self.sp
+    }
+
+    /// Set stack pointer
+    fn set_sp(&mut self, sp: usize) {
+        debug_assert!(
+            STACK.contains(&sp),
+            "Stack pointer {:04X} outside STACK memory!",
+            sp
+        );
+        self.sp = sp;
     }
 
     /// Get memory
@@ -1045,7 +1066,7 @@ impl Cpu {
                 self.registers[i + 1] = (data & 0x00FF) as u8;
             }
             SP => {
-                self.sp = data as usize;
+                self.set_sp(data as usize);
             }
         }
     }
@@ -1057,7 +1078,7 @@ impl Cpu {
                 let i = (rp as usize) * 2;
                 (self.registers[i] as u16) << 8 | self.registers[i + 1] as u16
             }
-            SP => self.sp as u16,
+            SP => self.get_sp() as Data16,
         }
     }
 
@@ -1082,30 +1103,31 @@ impl Cpu {
     }
 
     fn push_data(&mut self, data: Data) {
-        self.set_memory(self.sp - 1, data);
-        self.sp -= 1;
+        self.set_sp(self.get_sp() - 1);
+        self.set_memory(self.get_sp(), data);
     }
 
     /// Pop
     fn pop(&mut self) -> Address {
         let ret = self.peek();
-        self.sp += 2;
+        self.set_sp(self.get_sp() + 2);
         ret
     }
 
     fn pop_data(&mut self) -> Data {
         let ret = self.peek_data();
-        self.sp += 1;
+        self.set_sp(self.get_sp() + 1);
         ret
     }
 
     /// Peek
     fn peek(&self) -> Address {
-        (self.get_memory(self.sp) as Address) | ((self.get_memory(self.sp + 1) as Address) << 8)
+        (self.get_memory(self.get_sp()) as Address)
+            | ((self.get_memory(self.get_sp() + 1) as Address) << 8)
     }
 
     fn peek_data(&self) -> Data {
-        self.get_memory(self.sp)
+        self.get_memory(self.get_sp())
     }
 
     /// Get port
