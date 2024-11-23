@@ -892,6 +892,11 @@ impl Cpu {
                 self.set_flag(CY, true);
                 1
             }
+            LoadHLDirect(addr) => {
+                self.set_register(L, self.get_memory(addr));
+                self.set_register(H, self.get_memory(addr + 1));
+                5
+            }
             _ => panic!("Unimplemented {:04X?}", instr),
         };
 

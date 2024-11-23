@@ -860,3 +860,12 @@ fn or_register() {
         assert!(!cpu.get_flag(AC));
     }
 }
+
+#[test]
+fn load_hl_direct() {
+    let mut cpu = setup();
+    cpu.set_memory(*RAM.start(), 0xCD);
+    cpu.set_memory(*RAM.start() + 1, 0xAB);
+    assert_eq!(5, cpu.execute(LoadHLDirect(*RAM.start())));
+    assert_eq!(0xABCD, cpu.get_register_pair(HL));
+}
