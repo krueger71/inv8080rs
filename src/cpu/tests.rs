@@ -639,10 +639,20 @@ fn and_immediate() {
 #[test]
 fn add_immediate() {
     let mut cpu = setup();
-    cpu.set_register(A, 255);
+    cpu.set_register(A, 0xFF);
     cpu.set_flags(0);
     assert_eq!(2, cpu.execute(AddImmediate(1)));
     assert_eq!(0, cpu.get_register(A));
+    assert_eq!(true, cpu.get_flag(CY));
+}
+
+#[test]
+fn subtract_immediate() {
+    let mut cpu = setup();
+    cpu.set_register(A, 0);
+    cpu.set_flags(0);
+    assert_eq!(2, cpu.execute(SubtractImmediate(1)));
+    assert_eq!(0xFF, cpu.get_register(A));
     assert_eq!(true, cpu.get_flag(CY));
 }
 

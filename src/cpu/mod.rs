@@ -825,6 +825,13 @@ impl Cpu {
                 self.set_flags_for_arithmetic(before, self.get_register(A), carry);
                 2
             }
+            SubtractImmediate(data) => {
+                let before = self.get_register(A);
+                let (after, carry) = before.overflowing_sub(data);
+                self.set_register(A, after);
+                self.set_flags_for_arithmetic(before, self.get_register(A), carry);
+                2
+            }
             LoadAccumulatorDirect(addr) => {
                 self.set_register(A, self.get_memory(addr));
                 4
