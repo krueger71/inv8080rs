@@ -742,3 +742,32 @@ fn restart() {
     assert_eq!(cpu.registers, [0; NREGS]);
     assert_eq!(cpu.get_flags(), 0);
 }
+
+#[test]
+fn or_memory() {
+    let mut cpu = setup();
+    cpu.set_register_pair(HL, 0x2000);
+    cpu.set_memory(0x2000, 0b1010_1010);
+    cpu.set_register(A, 0b0101_0101);
+    cpu.set_flag(AC, true);
+    cpu.set_flag(CY, true);
+    assert_eq!(2, cpu.execute(OrMemory));
+    assert_eq!(0b1111_1111, cpu.get_register(A));
+    assert!(!cpu.get_flag(CY));
+    assert!(!cpu.get_flag(AC));
+}
+
+#[test]
+fn or_register() {
+    let mut cpu = setup();
+    for r in [B, C, D, E, H, L] {
+        cpu.set_register(r, 0b1010_1010);
+        cpu.set_register(A, 0b0101_0101);
+        cpu.set_flag(AC, true);
+        cpu.set_flag(CY, true);
+        assert_eq!(1, cpu.execute(OrRegister(r)));
+        assert_eq!(0b1111_1111, cpu.get_register(A));
+        assert!(!cpu.get_flag(CY));
+        assert!(!cpu.get_flag(AC));
+    }
+}

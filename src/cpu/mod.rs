@@ -795,6 +795,22 @@ impl Cpu {
                 self.set_register(A, acc);
                 1
             }
+            OrMemory => {
+                let before = self.get_register(A);
+                let val = self.get_memory(self.get_register_pair(HL) as usize);
+                self.set_register(A, before | val);
+                self.set_flags_for_arithmetic(before, self.get_register(A), false);
+                self.set_flag(AC, false);
+                2
+            }
+            OrRegister(r) => {
+                let before = self.get_register(A);
+                let val = self.get_register(r);
+                self.set_register(A, before | val);
+                self.set_flags_for_arithmetic(before, self.get_register(A), false);
+                self.set_flag(AC, false);
+                1
+            }
             AndImmediate(data) => {
                 let before = self.get_register(A);
                 self.set_register(A, before & data);
