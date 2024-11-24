@@ -772,9 +772,15 @@ impl Cpu {
                 1
             }
             ExchangeSPWithHL => {
-                let sp = self.get_register_pair(SP);
-                self.set_register_pair(SP, self.get_register_pair(HL));
-                self.set_register_pair(HL, sp);
+                let h = self.get_register(H);
+                let l = self.get_register(L);
+                let sl = self.get_memory(self.get_sp());
+                let sh = self.get_memory(self.get_sp() + 1);
+                self.set_register(L, sl);
+                self.set_register(H, sh);
+                self.set_memory(self.get_sp(), l);
+                self.set_memory(self.get_sp() + 1, h);
+
                 5
             }
             Output(port) => {
@@ -914,7 +920,7 @@ impl Cpu {
                 self.set_register(H, self.get_memory(addr + 1));
                 5
             }
-            _ => panic!("Unimplemented {:04X?}", instr),
+            _ => panic!("Unimplemented {:04X?} now at {:04X?}", instr, self.pc),
         };
 
         #[cfg(debug_assertions)]

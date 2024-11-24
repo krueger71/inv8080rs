@@ -633,11 +633,13 @@ fn exchange_hl_with_de() {
 #[test]
 fn exchange_sp_with_hl() {
     let mut cpu = setup();
-    cpu.set_register_pair(HL, *STACK.start() as Data16);
-    cpu.set_register_pair(SP, *STACK.end() as Data16);
+    cpu.set_sp(*STACK.end());
+    cpu.push(0xFEDC);
+    cpu.set_register_pair(HL, 0xABCD);
     assert_eq!(5, cpu.execute(ExchangeSPWithHL));
-    assert_eq!(*STACK.end() as Data16, cpu.get_register_pair(HL));
-    assert_eq!(*STACK.start() as Data16, cpu.get_register_pair(SP));
+    assert_eq!(0xFEDC, cpu.get_register_pair(HL));
+    assert_eq!(*STACK.end() - 2, cpu.get_sp());
+    assert_eq!(0xABCD, cpu.peek());
 }
 
 #[test]
