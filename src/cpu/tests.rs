@@ -771,6 +771,21 @@ fn subtract_immediate() {
 }
 
 #[test]
+fn subtract_immediate_with_borrow() {
+    let mut cpu = setup();
+    cpu.set_register(A, 0);
+    cpu.set_flags(0);
+    cpu.set_flag(CY, true);
+    assert_eq!(2, cpu.execute(SubtractImmediateWithBorrow(1)));
+    assert_eq!(0xFE, cpu.get_register(A));
+    assert!(cpu.get_flag(CY));
+    cpu.set_flag(CY, false);
+    assert_eq!(2, cpu.execute(SubtractImmediateWithBorrow(1)));
+    assert_eq!(0xFD, cpu.get_register(A));
+    assert!(!cpu.get_flag(CY));
+}
+
+#[test]
 fn load_accumulator_direct() {
     let mut cpu = setup();
     let addr = *RAM.start();

@@ -876,6 +876,14 @@ impl Cpu {
                 self.set_flags_for_arithmetic(before, self.get_register(A), carry);
                 2
             }
+            SubtractImmediateWithBorrow(data) => {
+                let before = self.get_register(A);
+                let (after, carry) =
+                    before.overflowing_sub(data + if self.get_flag(CY) { 1 } else { 0 });
+                self.set_register(A, after);
+                self.set_flags_for_arithmetic(before, self.get_register(A), carry);
+                2
+            }
             LoadAccumulatorDirect(addr) => {
                 self.set_register(A, self.get_memory(addr));
                 4
