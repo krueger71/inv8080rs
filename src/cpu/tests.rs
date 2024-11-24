@@ -193,6 +193,11 @@ fn get_and_set_reg_pair() {
         cpu.set_register_pair(rp, *STACK.end() as Data16);
         assert_eq!(*STACK.end() as Data16, cpu.get_register_pair(rp));
     }
+
+    cpu.set_sp(*STACK.start());
+    assert_eq!(*STACK.start() as Data16, cpu.get_register_pair(SP));
+    cpu.set_register_pair(SP, *STACK.end() as Data16);
+    assert_eq!(*STACK.end(), cpu.get_sp());
 }
 
 #[test]
@@ -623,6 +628,16 @@ fn exchange_hl_with_de() {
     assert_eq!(1, cpu.execute(ExchangeHLWithDE));
     assert_eq!(0xABCD, cpu.get_register_pair(HL));
     assert_eq!(0x1234, cpu.get_register_pair(DE));
+}
+
+#[test]
+fn exchange_sp_with_hl() {
+    let mut cpu = setup();
+    cpu.set_register_pair(HL, *STACK.start() as Data16);
+    cpu.set_register_pair(SP, *STACK.end() as Data16);
+    assert_eq!(5, cpu.execute(ExchangeSPWithHL));
+    assert_eq!(*STACK.end() as Data16, cpu.get_register_pair(HL));
+    assert_eq!(*STACK.start() as Data16, cpu.get_register_pair(SP));
 }
 
 #[test]

@@ -771,6 +771,12 @@ impl Cpu {
                 self.set_register_pair(DE, hl);
                 1
             }
+            ExchangeSPWithHL => {
+                let sp = self.get_register_pair(SP);
+                self.set_register_pair(SP, self.get_register_pair(HL));
+                self.set_register_pair(HL, sp);
+                5
+            }
             Output(port) => {
                 self.set_bus(port as usize, self.get_register(A));
                 3
