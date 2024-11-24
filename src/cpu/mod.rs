@@ -932,6 +932,11 @@ impl Cpu {
                 self.set_register(H, self.get_memory(addr + 1));
                 5
             }
+            StoreHLDirect(addr) => {
+                self.set_memory(addr, self.get_register(L));
+                self.set_memory(addr + 1, self.get_register(H));
+                5
+            }
             _ => panic!("Unimplemented {:04X?} now at {:04X?}", instr, self.pc),
         };
 

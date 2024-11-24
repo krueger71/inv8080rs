@@ -931,3 +931,12 @@ fn load_hl_direct() {
     assert_eq!(5, cpu.execute(LoadHLDirect(*RAM.start())));
     assert_eq!(0xABCD, cpu.get_register_pair(HL));
 }
+
+#[test]
+fn store_hl_direct() {
+    let mut cpu = setup();
+    cpu.set_register_pair(HL, 0xABCD);
+    assert_eq!(5, cpu.execute(StoreHLDirect(*RAM.start())));
+    assert_eq!(0xCD, cpu.get_memory(*RAM.start()));
+    assert_eq!(0xAB, cpu.get_memory(*RAM.start() + 1));
+}
