@@ -247,6 +247,14 @@ fn jump() {
 }
 
 #[test]
+fn jump_hl_indirect() {
+    let mut cpu = setup();
+    cpu.set_register_pair(HL, *ROM.end() as Data16);
+    assert_eq!(1, cpu.execute(JumpHLIndirect));
+    assert_eq!(*ROM.end(), cpu.get_pc());
+}
+
+#[test]
 fn load_register_pair_immediate() {
     let mut cpu = setup();
     assert_eq!(3, cpu.execute(LoadRegisterPairImmediate(BC, 0xABCD)));

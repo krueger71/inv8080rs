@@ -634,6 +634,10 @@ impl Cpu {
                 self.set_pc(addr);
                 3
             }
+            JumpHLIndirect => {
+                self.set_pc(self.get_register_pair(HL) as Address);
+                1
+            }
             LoadRegisterPairImmediate(rp, data) => {
                 self.set_register_pair(rp, data);
                 3
