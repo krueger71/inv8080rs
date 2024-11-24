@@ -375,6 +375,16 @@ fn increment_register_pair() {
 }
 
 #[test]
+fn decrement_register_pair() {
+    let mut cpu = setup();
+    for rp in [BC, DE, HL, SP] {
+        cpu.set_register_pair(rp, *STACK.end() as Data16);
+        assert_eq!(1, cpu.execute(DecrementRegisterPair(rp)));
+        assert_eq!((*STACK.end() as Data16) - 1, cpu.get_register_pair(rp));
+    }
+}
+
+#[test]
 fn decrement_register() {
     let mut cpu = setup();
     for r in [B, C, D, E, H, L, A] {

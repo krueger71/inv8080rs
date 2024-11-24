@@ -672,6 +672,10 @@ impl Cpu {
                 self.set_register_pair(rp, 1 + self.get_register_pair(rp));
                 1
             }
+            DecrementRegisterPair(rp) => {
+                self.set_register_pair(rp, self.get_register_pair(rp) - 1);
+                1
+            }
             DecrementRegister(r) => {
                 let before = self.get_register(r);
                 let (after, _) = before.overflowing_sub(1);
