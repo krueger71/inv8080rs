@@ -228,6 +228,8 @@ pub struct Cpu {
     sp: Address,
     /// 8-bit bi-directional bus for I/O
     bus: [Data; NPORTS],
+    /// 16-bit shift register, communication via I/O
+    shift: Data16,
     /// CPU interruptable
     interruptable: bool,
     /// Display should be updated (this is set to true on memory writes to the framebuffer region of memory, then emulator clears it after drawing is finished)
@@ -246,6 +248,7 @@ impl Cpu {
             registers: [0; NREGS],
             sp: 0,
             bus: [0; NPORTS],
+            shift: 0,
             interruptable: false,
             display_update: true,
         }
@@ -792,7 +795,8 @@ impl Cpu {
                 3
             }
             Input(port) => {
-                self.set_register(A, self.get_bus(port as usize));
+                let bus = self.get_bus(port as usize);
+                self.set_register(A, bus);
                 3
             }
             MoveFromMemory(r) => {
@@ -942,8 +946,8 @@ impl Cpu {
 
         #[cfg(debug_assertions)]
         eprintln!(
-            "     pc: {:04X}, sp: {:04X}, regs: {:02X?}, bus: {:02X?}, intr: {}",
-            self.pc, self.sp, self.registers, self.bus, self.interruptable
+            "     pc: {:04X}, sp: {:04X}, regs: {:02X?}, bus: {:02X?}, shift: {:04X}, intr: {}",
+            self.pc, self.sp, self.registers, self.bus, self.shift, self.interruptable
         );
 
         cycles
@@ -1176,12 +1180,21 @@ impl Cpu {
     }
 
     /// Get port
-    fn get_bus(&self, port: usize) -> Data {
+    fn get_bus(&mut self, port: usize) -> Data {
+        if port == 3 {
+            let offset = self.get_bus(2) & 0x7; // Save bits 0, 1 and 2 for amount
+            self.bus[port] = ((self.shift << offset) >> 8) as u8;
+        }
         self.bus[port]
     }
 
     /// Set port
     fn set_bus(&mut self, port: usize, data: Data) {
+        if port == 4 {
+            // Set shift register
+            self.shift = (data as Data16) << 8 | self.shift >> 8;
+        }
+
         self.bus[port] = data;
     }
 }

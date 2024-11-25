@@ -940,3 +940,18 @@ fn store_hl_direct() {
     assert_eq!(0xCD, cpu.get_memory(*RAM.start()));
     assert_eq!(0xAB, cpu.get_memory(*RAM.start() + 1));
 }
+
+#[test]
+fn shift_register() {
+    let mut cpu = setup();
+
+    cpu.set_register(A, 0x1);
+    assert_eq!(3, cpu.execute(Output(4)));
+    assert_eq!(cpu.shift, 0b0000_0001_0000_0000);
+    assert_eq!(3, cpu.execute(Output(4)));
+    assert_eq!(cpu.shift, 0b0000_0001_0000_0001);
+    assert_eq!(0x1, cpu.get_bus(3));
+    cpu.set_register(A, 0x7);
+    assert_eq!(3, cpu.execute(Output(2)));
+    assert_eq!(0b0000_0000_1000_0000, cpu.get_bus(3));
+}
