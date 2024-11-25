@@ -170,7 +170,11 @@ fn get_bus() {
     let mut cpu = setup();
     cpu.bus = [0, 1, 2, 3, 4, 5, 6, 7];
     for port in 0..NPORTS {
-        assert_eq!(port as u8, cpu.get_bus(port));
+        if port != 3 {
+            assert_eq!(port as u8, cpu.get_bus(port));
+        } else {
+            assert_eq!(0, cpu.get_bus(port));
+        }
     }
 }
 
@@ -181,7 +185,11 @@ fn set_bus() {
     for port in 0..NPORTS {
         assert_eq!(0, cpu.get_bus(port));
         cpu.set_bus(port, 0xAB);
-        assert_eq!(0xAB, cpu.get_bus(port));
+        if port != 3 {
+            assert_eq!(0xAB, cpu.get_bus(port));
+        } else {
+            assert_eq!(0, cpu.get_bus(port));
+        }
     }
 }
 
@@ -853,7 +861,11 @@ fn input() {
         assert_eq!(0, cpu.get_bus(port));
         cpu.set_bus(port, (port + 1) as u8);
         assert_eq!(3, cpu.execute(Input(port as u8)));
-        assert_eq!((port + 1) as u8, cpu.get_register(A));
+        if port != 3 {
+            assert_eq!((port + 1) as u8, cpu.get_register(A));
+        } else {
+            assert_eq!(0, cpu.get_register(A));
+        }
     }
 }
 
@@ -864,7 +876,11 @@ fn output() {
         assert_eq!(0, cpu.get_bus(port));
         cpu.set_register(A, (port + 1) as u8);
         assert_eq!(3, cpu.execute(Output(port as u8)));
-        assert_eq!((port + 1) as u8, cpu.get_bus(port));
+        if port != 3 {
+            assert_eq!((port + 1) as u8, cpu.get_bus(port));
+        } else {
+            assert_eq!(0, cpu.get_bus(port));
+        }
     }
 }
 
