@@ -964,10 +964,14 @@ fn shift_register() {
     cpu.set_register(A, 0x1);
     assert_eq!(3, cpu.execute(Output(4)));
     assert_eq!(cpu.shift, 0b0000_0001_0000_0000);
+    cpu.set_register(A, 0x3);
     assert_eq!(3, cpu.execute(Output(4)));
-    assert_eq!(cpu.shift, 0b0000_0001_0000_0001);
-    assert_eq!(0x1, cpu.get_bus(3));
+    assert_eq!(cpu.shift, 0b0000_0011_0000_0001);
+    assert_eq!(0x3, cpu.get_bus(3));
     cpu.set_register(A, 0x7);
     assert_eq!(3, cpu.execute(Output(2)));
-    assert_eq!(0b0000_0000_1000_0000, cpu.get_bus(3));
+    assert_eq!(0b1000_0000, cpu.get_bus(3));
+    cpu.set_register(A, 0x6);
+    assert_eq!(3, cpu.execute(Output(2)));
+    assert_eq!(0b1100_0000, cpu.get_bus(3));
 }
