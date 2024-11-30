@@ -722,37 +722,25 @@ impl Cpu {
                 2
             }
             IncrementRegisterPair(rp) => {
-                let (val, carry) = self.get_register_pair(rp).overflowing_add(1);
-                if carry {
-                    println!("Overflow incrementing rp {:04X}", self.pc);
-                }
+                let (val, _) = self.get_register_pair(rp).overflowing_add(1);
                 self.set_register_pair(rp, val);
                 1
             }
             DecrementRegisterPair(rp) => {
-                let (val, carry) = self.get_register_pair(rp).overflowing_sub(1);
-                if carry {
-                    println!("Overflow decrementing rp {:04X}", self.pc);
-                }
+                let (val, _) = self.get_register_pair(rp).overflowing_sub(1);
                 self.set_register_pair(rp, val);
                 1
             }
             DecrementRegister(r) => {
                 let before = self.get_register(r);
-                let (after, carry) = before.overflowing_sub(1);
-                if carry {
-                    println!("Overflow decrementing reg {:04X}", self.pc);
-                }
+                let (after, _) = before.overflowing_sub(1);
                 self.set_register(r, after);
                 self.set_flags_for_arithmetic(before, after, self.get_flag(CY));
                 1
             }
             IncrementRegister(r) => {
                 let before = self.get_register(r);
-                let (after, carry) = before.overflowing_add(1);
-                if carry {
-                    println!("Overflow incrementing reg {:04X}", self.pc);
-                }
+                let (after, _) = before.overflowing_add(1);
                 self.set_register(r, after);
                 self.set_flags_for_arithmetic(before, after, self.get_flag(CY));
                 1
