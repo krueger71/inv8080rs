@@ -751,6 +751,17 @@ fn add_immediate() {
 }
 
 #[test]
+fn add_memory() {
+    let mut cpu = setup();
+    cpu.set_register(A, 0xFF);
+    cpu.set_register_pair(HL, *RAM.start() as Data16);
+    cpu.set_memory(*RAM.start(), 1);
+    assert_eq!(2, cpu.execute(AddMemory));
+    assert_eq!(0, cpu.get_register(A));
+    assert!(cpu.get_flag(CY));
+}
+
+#[test]
 fn subtract_immediate() {
     let mut cpu = setup();
     cpu.set_register(A, 0);

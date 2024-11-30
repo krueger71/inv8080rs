@@ -923,6 +923,14 @@ impl Cpu {
                 self.set_flags_for_arithmetic(before, self.get_register(A), carry);
                 2
             }
+            AddMemory => {
+                let before = self.get_register(A);
+                let data = self.get_memory(self.get_register_pair(HL) as Address);
+                let (after, carry) = before.overflowing_add(data);
+                self.set_register(A, after);
+                self.set_flags_for_arithmetic(before, self.get_register(A), carry);
+                2
+            }
             SubtractImmediate(data) => {
                 let before = self.get_register(A);
                 let (after, carry) = before.overflowing_sub(data);
