@@ -226,10 +226,14 @@ pub struct Cpu {
     registers: [Data; NREGS],
     /// Stack pointer/register pair SP
     sp: Address,
-    /// 8-bit bi-directional bus for I/O
-    bus: [Data; NPORTS],
-    /// 16-bit shift register, communication via I/O
+    /// 8-bit input bus
+    bus_in: [Data; NPORTS],
+    /// 8-bit output bus
+    bus_out: [Data; NPORTS],
+    /// 16-bit shift register, communication via I/O (port 4 write)
     shift: Data16,
+    /// 8-bit shift offset, communication via I/O (port 2 write)
+    offset: Data,
     /// CPU interruptable
     interruptable: bool,
     /// Display should be updated (this is set to true on memory writes to the framebuffer region of memory, then emulator clears it after drawing is finished)
@@ -247,8 +251,10 @@ impl Cpu {
             pc: 0,
             registers: [0; NREGS],
             sp: 0,
-            bus: [0; NPORTS],
+            bus_in: [0b0000_1110, 0b0000_1000, 0, 0, 0, 0, 0, 0],
+            bus_out: [0; NPORTS],
             shift: 0,
+            offset: 0,
             interruptable: false,
             display_update: true,
         }
@@ -276,6 +282,35 @@ impl Cpu {
     /// Set display update
     pub fn set_display_update(&mut self, value: bool) {
         self.display_update = value;
+    }
+
+    /// Get CPU input bus (read external input)
+    fn get_bus_in(&self, port: usize) -> u8 {
+        if port == 3 {
+            return ((self.shift << self.offset) >> 8) as u8;
+        }
+        self.bus_in[port]
+    }
+
+    /// Set CPU input bus (write external input)
+    pub fn set_bus_in(&mut self, port: usize, data: u8) {
+        self.bus_in[port] = data;
+    }
+
+    /// Get CPU output bus (read CPU output)
+    pub fn get_bus_out(&self, port: usize) -> u8 {
+        self.bus_out[port]
+    }
+
+    /// Set CPU output bus (write CPU output)
+    fn set_bus_out(&mut self, port: usize, data: u8) {
+        if port == 2 {
+            self.offset = data & 0x7
+        } else if port == 4 {
+            self.shift = (data as Data16) << 8 | self.shift >> 8;
+        }
+
+        self.bus_out[port] = data
     }
 
     /// Fetch and decode one instruction, including immediate data, and increment program counter
@@ -687,25 +722,37 @@ impl Cpu {
                 2
             }
             IncrementRegisterPair(rp) => {
-                let (val, _) = self.get_register_pair(rp).overflowing_add(1);
+                let (val, carry) = self.get_register_pair(rp).overflowing_add(1);
+                if carry {
+                    println!("Overflow incrementing rp {:04X}", self.pc);
+                }
                 self.set_register_pair(rp, val);
                 1
             }
             DecrementRegisterPair(rp) => {
-                let (val, _) = self.get_register_pair(rp).overflowing_sub(1);
+                let (val, carry) = self.get_register_pair(rp).overflowing_sub(1);
+                if carry {
+                    println!("Overflow decrementing rp {:04X}", self.pc);
+                }
                 self.set_register_pair(rp, val);
                 1
             }
             DecrementRegister(r) => {
                 let before = self.get_register(r);
-                let (after, _) = before.overflowing_sub(1);
+                let (after, carry) = before.overflowing_sub(1);
+                if carry {
+                    println!("Overflow decrementing reg {:04X}", self.pc);
+                }
                 self.set_register(r, after);
                 self.set_flags_for_arithmetic(before, after, self.get_flag(CY));
                 1
             }
             IncrementRegister(r) => {
                 let before = self.get_register(r);
-                let (after, _) = before.overflowing_add(1);
+                let (after, carry) = before.overflowing_add(1);
+                if carry {
+                    println!("Overflow incrementing reg {:04X}", self.pc);
+                }
                 self.set_register(r, after);
                 self.set_flags_for_arithmetic(before, after, self.get_flag(CY));
                 1
@@ -804,11 +851,11 @@ impl Cpu {
                 5
             }
             Output(port) => {
-                self.set_bus(port as usize, self.get_register(A));
+                self.set_bus_out(port as usize, self.get_register(A));
                 3
             }
             Input(port) => {
-                let bus = self.get_bus(port as usize);
+                let bus = self.get_bus_in(port as usize);
                 self.set_register(A, bus);
                 3
             }
@@ -959,8 +1006,8 @@ impl Cpu {
 
         #[cfg(debug_assertions)]
         eprintln!(
-            "     pc: {:04X}, sp: {:04X}, regs: {:02X?}, bus: {:02X?}, shift: {:04X}, intr: {}",
-            self.pc, self.sp, self.registers, self.bus, self.shift, self.interruptable
+            "     pc: {:04X}, sp: {:04X}, regs: {:02X?}, bus_in: {:02X?}, bus_out: {:02X?}, shift: {:04X}, intr: {}",
+            self.pc, self.sp, self.registers, self.bus_in, self.bus_out, self.shift, self.interruptable
         );
 
         cycles
@@ -1190,24 +1237,5 @@ impl Cpu {
 
     fn peek_data(&self) -> Data {
         self.get_memory(self.get_sp())
-    }
-
-    /// Get port
-    fn get_bus(&mut self, port: usize) -> Data {
-        if port == 3 {
-            let offset = self.get_bus(2) & 0x7; // Save bits 0, 1 and 2 for amount
-            self.bus[port] = ((self.shift << offset) >> 8) as u8;
-        }
-        self.bus[port]
-    }
-
-    /// Set port
-    fn set_bus(&mut self, port: usize, data: Data) {
-        if port == 4 {
-            // Set shift register
-            self.shift = (data as Data16) << 8 | self.shift >> 8;
-        }
-
-        self.bus[port] = data;
     }
 }
