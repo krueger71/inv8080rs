@@ -234,7 +234,7 @@ pub struct Cpu {
     interruptable: bool,
     /// Display should be updated (this is set to true on memory writes to the framebuffer region of memory, then emulator clears it after drawing is finished)
     /// Probably next to useless optimization for a game where everything is moving on the screen :)
-    pub display_update: bool,
+    display_update: bool,
 }
 
 impl Cpu {
@@ -268,6 +268,17 @@ impl Cpu {
         get_bit(byte, 7 - (y % 8) as u8)
     }
 
+    /// Get display update
+    pub fn get_display_update(&self) -> bool {
+        self.display_update
+    }
+
+    /// Set display update
+    pub fn set_display_update(&mut self, value: bool) {
+        self.display_update = value;
+    }
+
+    /// Fetch and decode one instruction, including immediate data, and increment program counter
     #[allow(clippy::unusual_byte_groupings)]
     fn fetch_and_decode(&mut self) -> Instruction {
         let op = self.get_memory(self.get_pc());

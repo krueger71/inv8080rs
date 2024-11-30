@@ -209,7 +209,7 @@ impl Emu {
             }
             self.cpu.interrupt(2);
 
-            if self.cpu.display_update {
+            if self.cpu.get_display_update() {
                 canvas.set_draw_color(background_color);
                 canvas.clear();
                 canvas.set_draw_color(foreground_color);
@@ -230,7 +230,7 @@ impl Emu {
                 #[cfg(debug_assertions)]
                 eprintln!("Display updated");
 
-                self.cpu.display_update = false; // Cpu will set this to true whenever something changes on screen
+                self.cpu.set_display_update(false); // Cpu will set this to true whenever something changes on screen
             }
 
             let sleep_duration =
