@@ -544,12 +544,12 @@ fn move_register() {
 fn compare_immediate() {
     let mut cpu = setup();
 
-    cpu.set_register(A, 0xFE);
-    assert_eq!(2, cpu.execute(CompareImmediate(0xFB)));
-    assert_eq!(cpu.get_flags(), 0);
-    assert_eq!(2, cpu.execute(CompareImmediate(0xFE)));
+    cpu.set_register(A, 0);
+    assert_eq!(2, cpu.execute(CompareImmediate(0)));
     assert!(cpu.get_flag(Z));
-    assert_eq!(2, cpu.execute(CompareImmediate(0xFF)));
+    assert!(!cpu.get_flag(CY));
+    assert_eq!(2, cpu.execute(CompareImmediate(1)));
+    assert!(!cpu.get_flag(Z));
     assert!(cpu.get_flag(CY));
 }
 

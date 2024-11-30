@@ -786,7 +786,9 @@ impl Cpu {
                 1
             }
             CompareImmediate(data) => {
-                self.set_flags_for_comparison(data);
+                let before = self.get_register(A);
+                let (after, carry) = before.overflowing_sub(data);
+                self.set_flags_for_arithmetic(before, after, carry);
                 2
             }
             Push(rp) => {
@@ -1145,13 +1147,6 @@ impl Cpu {
             AC,
             (before & 0b0000_1000 >> 3) == 1 && (after & 0b0001_0000 >> 4) == 1,
         );
-    }
-
-    /// Set flags for comparisons
-    fn set_flags_for_comparison(&mut self, value: u8) {
-        let acc = self.get_register(A);
-        self.set_flag(Z, acc == value);
-        self.set_flag(CY, acc < value);
     }
 
     /// Set register pair
