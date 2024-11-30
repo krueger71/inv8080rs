@@ -954,3 +954,11 @@ fn shift_register() {
     assert_eq!(3, cpu.execute(Output(2)));
     assert_eq!(0b1100_0000, cpu.get_bus_in(3));
 }
+
+#[test]
+fn complement_accumulator() {
+    let mut cpu = setup();
+    cpu.set_register(A, 0b1010_1010);
+    assert_eq!(1, cpu.execute(ComplementAccumulator));
+    assert_eq!(0b0101_0101, cpu.get_register(A));
+}

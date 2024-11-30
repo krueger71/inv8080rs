@@ -954,6 +954,10 @@ impl Cpu {
                 self.set_memory(addr, self.get_register(A));
                 4
             }
+            ComplementAccumulator => {
+                self.set_register(A, self.get_register(A) ^ 0xFF);
+                1
+            }
             XorRegister(r) => {
                 let before = self.get_register(A);
                 self.set_register(A, before ^ self.get_register(r));
