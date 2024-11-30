@@ -741,6 +741,18 @@ fn and_immediate() {
 }
 
 #[test]
+fn and_memory() {
+    let mut cpu = setup();
+    cpu.set_register(A, 0b1010_1010);
+    cpu.set_flag(CY, true);
+    cpu.set_register_pair(HL, *RAM.start() as Data16);
+    cpu.set_memory(*RAM.start(), 0b1111_0000);
+    assert_eq!(2, cpu.execute(AndMemory));
+    assert_eq!(0b1010_1010 & 0b1111_0000, cpu.get_register(A));
+    assert!(!cpu.get_flag(CY));
+}
+
+#[test]
 fn add_immediate() {
     let mut cpu = setup();
     cpu.set_register(A, 0xFF);

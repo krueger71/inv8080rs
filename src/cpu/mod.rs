@@ -916,6 +916,13 @@ impl Cpu {
                 self.set_flag(AC, false);
                 2
             }
+            AndMemory => {
+                let before = self.get_register(A);
+                let data = self.get_memory(self.get_register_pair(HL) as usize);
+                self.set_register(A, before & data);
+                self.set_flags_for_arithmetic(before, self.get_register(A), false);
+                2
+            }
             AddImmediate(data) => {
                 let before = self.get_register(A);
                 let (after, carry) = before.overflowing_add(data);
