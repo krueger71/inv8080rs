@@ -774,6 +774,16 @@ fn add_memory() {
 }
 
 #[test]
+fn add_register() {
+    let mut cpu = setup();
+    cpu.set_register(A, 0xFF);
+    cpu.set_register(B, 0x1);
+    assert_eq!(1, cpu.execute(AddRegister(B)));
+    assert_eq!(0, cpu.get_register(A));
+    assert!(cpu.get_flag(CY));
+}
+
+#[test]
 fn subtract_immediate() {
     let mut cpu = setup();
     cpu.set_register(A, 0);
