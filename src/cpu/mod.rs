@@ -753,6 +753,14 @@ impl Cpu {
                 self.set_flags_for_arithmetic(before, after, self.get_flag(CY));
                 3
             }
+            IncrementMemory => {
+                let addr = self.get_register_pair(HL) as Address;
+                let before = self.get_memory(addr);
+                let (after, _) = before.overflowing_add(1);
+                self.set_memory(addr, after);
+                self.set_flags_for_arithmetic(before, after, self.get_flag(CY));
+                3
+            }
             ConditionalJump(c, addr) => {
                 if self.is_condition(c) {
                     self.set_pc(addr);
@@ -787,6 +795,20 @@ impl Cpu {
             }
             CompareImmediate(data) => {
                 let before = self.get_register(A);
+                let (after, carry) = before.overflowing_sub(data);
+                self.set_flags_for_arithmetic(before, after, carry);
+                2
+            }
+            CompareRegister(r) => {
+                let before = self.get_register(A);
+                let data = self.get_register(r);
+                let (after, carry) = before.overflowing_sub(data);
+                self.set_flags_for_arithmetic(before, after, carry);
+                1
+            }
+            CompareMemory => {
+                let before = self.get_register(A);
+                let data = self.get_memory(self.get_register_pair(HL) as Address);
                 let (after, carry) = before.overflowing_sub(data);
                 self.set_flags_for_arithmetic(before, after, carry);
                 2
@@ -945,6 +967,14 @@ impl Cpu {
                 self.set_register(A, after);
                 self.set_flags_for_arithmetic(before, self.get_register(A), carry);
                 2
+            }
+            SubtractRegister(r) => {
+                let before = self.get_register(A);
+                let data = self.get_register(r);
+                let (after, carry) = before.overflowing_sub(data);
+                self.set_register(A, after);
+                self.set_flags_for_arithmetic(before, self.get_register(A), carry);
+                1
             }
             SubtractImmediate(data) => {
                 let before = self.get_register(A);

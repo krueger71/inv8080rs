@@ -425,6 +425,11 @@ fn increment_register() {
 }
 
 #[test]
+fn increment_memory() {
+    assert!(false);
+}
+
+#[test]
 fn decrement_memory() {
     let mut cpu = setup();
     let addr = *RAM.start();
@@ -551,6 +556,16 @@ fn compare_immediate() {
     assert_eq!(2, cpu.execute(CompareImmediate(1)));
     assert!(!cpu.get_flag(Z));
     assert!(cpu.get_flag(CY));
+}
+
+#[test]
+fn compare_register() {
+    assert!(false);
+}
+
+#[test]
+fn compare_memory() {
+    assert!(false);
 }
 
 #[test]
@@ -781,6 +796,11 @@ fn add_register() {
     assert_eq!(1, cpu.execute(AddRegister(B)));
     assert_eq!(0, cpu.get_register(A));
     assert!(cpu.get_flag(CY));
+}
+
+#[test]
+fn subtract_register() {
+    assert!(false);
 }
 
 #[test]
