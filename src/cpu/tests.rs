@@ -426,7 +426,17 @@ fn increment_register() {
 
 #[test]
 fn increment_memory() {
-    assert!(false);
+    let mut cpu = setup();
+    let addr = *RAM.start();
+    cpu.set_register_pair(HL, addr as u16);
+    cpu.set_memory(addr, 2);
+    assert_eq!(3, cpu.execute(IncrementMemory));
+    assert_eq!(3, cpu.get_memory(addr));
+    assert!(!cpu.get_flag(Z));
+    assert!(!cpu.get_flag(S));
+    assert!(cpu.get_flag(P));
+    assert!(!cpu.get_flag(CY));
+    assert!(!cpu.get_flag(AC));
 }
 
 #[test]
@@ -549,23 +559,61 @@ fn move_register() {
 fn compare_immediate() {
     let mut cpu = setup();
 
-    cpu.set_register(A, 0);
-    assert_eq!(2, cpu.execute(CompareImmediate(0)));
+    cpu.set_register(A, 1);
+    assert_eq!(2, cpu.execute(CompareImmediate(1)));
     assert!(cpu.get_flag(Z));
     assert!(!cpu.get_flag(CY));
-    assert_eq!(2, cpu.execute(CompareImmediate(1)));
+    cpu.set_flags(0);
+    assert_eq!(2, cpu.execute(CompareImmediate(0)));
+    assert!(!cpu.get_flag(Z));
+    assert!(!cpu.get_flag(CY));
+    cpu.set_flags(0);
+    assert_eq!(2, cpu.execute(CompareImmediate(2)));
     assert!(!cpu.get_flag(Z));
     assert!(cpu.get_flag(CY));
 }
 
 #[test]
 fn compare_register() {
-    assert!(false);
+    let mut cpu = setup();
+
+    cpu.set_register(A, 1);
+    cpu.set_register(B, 1);
+    assert_eq!(1, cpu.execute(CompareRegister(B)));
+    assert!(cpu.get_flag(Z));
+    assert!(!cpu.get_flag(CY));
+    cpu.set_flags(0);
+    cpu.set_register(B, 0);
+    assert_eq!(1, cpu.execute(CompareRegister(B)));
+    assert!(!cpu.get_flag(Z));
+    assert!(!cpu.get_flag(CY));
+    cpu.set_flags(0);
+    cpu.set_register(B, 2);
+    assert_eq!(1, cpu.execute(CompareRegister(B)));
+    assert!(!cpu.get_flag(Z));
+    assert!(cpu.get_flag(CY));
 }
 
 #[test]
 fn compare_memory() {
-    assert!(false);
+    let mut cpu = setup();
+
+    cpu.set_register(A, 1);
+    cpu.set_register_pair(HL, *RAM.start() as Data16);
+    cpu.set_memory(*RAM.start(), 1);
+    assert_eq!(2, cpu.execute(CompareMemory));
+    assert!(cpu.get_flag(Z));
+    assert!(!cpu.get_flag(CY));
+    cpu.set_flags(0);
+    cpu.set_memory(*RAM.start(), 0);
+    assert_eq!(2, cpu.execute(CompareMemory));
+    assert!(!cpu.get_flag(Z));
+    assert!(!cpu.get_flag(CY));
+    cpu.set_flags(0);
+    cpu.set_memory(*RAM.start(), 2);
+    assert_eq!(2, cpu.execute(CompareMemory));
+    assert!(!cpu.get_flag(Z));
+    assert!(cpu.get_flag(CY));
 }
 
 #[test]
@@ -796,11 +844,18 @@ fn add_register() {
     assert_eq!(1, cpu.execute(AddRegister(B)));
     assert_eq!(0, cpu.get_register(A));
     assert!(cpu.get_flag(CY));
+    assert!(cpu.get_flag(Z));
 }
 
 #[test]
 fn subtract_register() {
-    assert!(false);
+    let mut cpu = setup();
+    cpu.set_register(A, 0);
+    cpu.set_register(B, 0x1);
+    assert_eq!(1, cpu.execute(SubtractRegister(B)));
+    assert_eq!(0xFF, cpu.get_register(A));
+    assert!(cpu.get_flag(CY));
+    assert!(cpu.get_flag(P));
 }
 
 #[test]
