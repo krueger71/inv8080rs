@@ -297,6 +297,11 @@ impl Cpu {
         self.bus_in[port] = data;
     }
 
+    /// Set CPU input bus bit (write external input)
+    pub fn set_bus_in_bit(&mut self, port: usize, bit: u8, value: bool) {
+        set_bit(&mut self.bus_in[port], bit, value);
+    }
+
     /// Get CPU output bus (read CPU output)
     pub fn get_bus_out(&self, port: usize) -> u8 {
         self.bus_out[port]

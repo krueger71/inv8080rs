@@ -174,19 +174,21 @@ impl Emu {
                     Event::KeyDown {
                         scancode: Some(scancode),
                         ..
-                    } => {
-                        if let Some(_keycode) = self.keymap(scancode) {
-                            // Handle the key down
+                    } => match self.keymap(scancode) {
+                        Some(control) => {
+                            self.cpu.set_bus_in_bit(control.0, control.1, true);
                         }
-                    }
+                        _ => (),
+                    },
                     Event::KeyUp {
                         scancode: Some(scancode),
                         ..
-                    } => {
-                        if let Some(_keycode) = self.keymap(scancode) {
-                            // Handle the key up
+                    } => match self.keymap(scancode) {
+                        Some(control) => {
+                            self.cpu.set_bus_in_bit(control.0, control.1, false);
                         }
-                    }
+                        _ => (),
+                    },
                     _ => {}
                 }
             }
@@ -235,24 +237,13 @@ impl Emu {
         }
     }
 
-    fn keymap(&self, scancode: Scancode) -> Option<usize> {
+    /// Match MAME controls somewhat
+    fn keymap(&self, scancode: Scancode) -> Option<(usize,u8)> {
         match scancode {
-            Scancode::Num1 => Some(1),
-            Scancode::Num2 => Some(2),
-            Scancode::Num3 => Some(3),
-            Scancode::Num4 => Some(0xC),
-            Scancode::Q => Some(4),
-            Scancode::W => Some(5),
-            Scancode::E => Some(6),
-            Scancode::R => Some(0xD),
-            Scancode::A => Some(7),
-            Scancode::S => Some(8),
-            Scancode::D => Some(9),
-            Scancode::F => Some(0xE),
-            Scancode::Z => Some(0xA),
-            Scancode::X => Some(0),
-            Scancode::C => Some(0xB),
-            Scancode::V => Some(0xF),
+            Scancode::T => Some((2, 2)),    // Tilt
+            Scancode::Num5 => Some((1,0)),  // Credit
+            Scancode::Num1 => Some((1,2)),  // P1 Start
+            Scancode::Num2 => Some((1,1)),  // P2 Start
             _ => None,
         }
     }
