@@ -318,8 +318,10 @@ impl Cpu {
     fn fetch_and_decode(&mut self) -> Instruction {
         let op = self.get_memory(self.get_pc());
 
-        #[cfg(debug_assertions)]
-        eprint!("{:04X} {:02X} {:08b} ", self.get_pc(), op, op);
+        // For debugging
+        // if self.get_pc() == 0x0A8E {
+        //     println!("Start debugging");
+        // }
 
         self.incr_pc();
 
@@ -674,10 +676,7 @@ impl Cpu {
 
     /// Execute one instruction and return number of cycles taken
     fn execute(&mut self, instr: Instruction) -> u32 {
-        #[cfg(debug_assertions)]
-        eprintln!("{:04X?}", instr);
-
-        let cycles = match instr {
+        match instr {
             NoOperation => 1,
             Jump(addr) => {
                 self.set_pc(addr);
@@ -1018,15 +1017,11 @@ impl Cpu {
             }
             DisableInterrupts => {
                 self.interruptable = false;
-                #[cfg(debug_assertions)]
-                eprintln!("Disable interrupts");
                 1
             }
             EnableInterrupts => {
                 // TODO The CPU should be interruptable following the next instruction
                 self.interruptable = true;
-                #[cfg(debug_assertions)]
-                eprintln!("Enable interrupts");
                 1
             }
             Restart(data) => {
@@ -1049,30 +1044,15 @@ impl Cpu {
                 5
             }
             _ => panic!("Unimplemented {:04X?} now at {:04X?}", instr, self.pc),
-        };
-
-        #[cfg(debug_assertions)]
-        eprintln!(
-            "     pc: {:04X}, sp: {:04X}, regs: {:02X?}, bus_in: {:02X?}, bus_out: {:02X?}, shift: {:04X}, intr: {}",
-            self.pc, self.sp, self.registers, self.bus_in, self.bus_out, self.shift, self.interruptable
-        );
-
-        cycles
+        }
     }
 
     /// Interrupt
     pub fn interrupt(&mut self, data: Data) -> u32 {
-        #[cfg(debug_assertions)]
-        eprint!("{:04X} ** ******** ", self.pc);
         if self.interruptable {
             self.interruptable = false; // TODO Should this be done?
             self.execute(Restart(data))
         } else {
-            #[cfg(debug_assertions)]
-            eprintln!(
-                "Interrupted with {} when not in an interruptable state!",
-                data
-            );
             0
         }
     }
@@ -1126,7 +1106,12 @@ impl Cpu {
 
     /// Set memory
     fn set_memory(&mut self, addr: Address, data: Data) {
-        debug_assert!(RAM.contains(&addr), "Writing outside ram at {:02X}!", addr);
+        debug_assert!(
+            RAM.contains(&addr),
+            "Writing outside ram at {:04X} pc = {:04X}!",
+            addr,
+            self.pc
+        );
         self.memory[addr] = data;
         if FRAMEBUFFER.contains(&addr) {
             self.display_update = true;

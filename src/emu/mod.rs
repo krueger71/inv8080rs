@@ -177,8 +177,6 @@ impl Emu {
                     } => {
                         if let Some(_keycode) = self.keymap(scancode) {
                             // Handle the key down
-                            #[cfg(debug_assertions)]
-                            eprintln!("Key {:0x} down", _keycode);
                         }
                     }
                     Event::KeyUp {
@@ -187,8 +185,6 @@ impl Emu {
                     } => {
                         if let Some(_keycode) = self.keymap(scancode) {
                             // Handle the key up
-                            #[cfg(debug_assertions)]
-                            eprintln!("Key {:0x} up", _keycode);
                         }
                     }
                     _ => {}
@@ -227,17 +223,11 @@ impl Emu {
 
                 canvas.present();
 
-                #[cfg(debug_assertions)]
-                eprintln!("Display updated");
-
                 self.cpu.set_display_update(false); // Cpu will set this to true whenever something changes on screen
             }
 
             let sleep_duration =
                 (1_000_000_000_i64 / self.fps as i64) - t.elapsed().as_nanos() as i64;
-
-            #[cfg(debug_assertions)]
-            eprintln!("Sleeping {} ns", sleep_duration);
 
             if sleep_duration >= 0 {
                 sleep(Duration::new(0, sleep_duration as u32));
