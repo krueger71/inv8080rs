@@ -157,7 +157,7 @@ impl Emu {
         );
 
         let mut events = sdl.event_pump().unwrap();
-        let cycles_per_frame = (1000 / self.fps) * (self.freq / 1000);
+        let cycles_per_frame = self.freq / self.fps;
 
         'main: loop {
             let t = Instant::now();
@@ -238,12 +238,12 @@ impl Emu {
     }
 
     /// Match MAME controls somewhat
-    fn keymap(&self, scancode: Scancode) -> Option<(usize,u8)> {
+    fn keymap(&self, scancode: Scancode) -> Option<(usize, u8)> {
         match scancode {
             Scancode::T => Some((2, 2)),    // Tilt
-            Scancode::Num5 => Some((1,0)),  // Credit
-            Scancode::Num1 => Some((1,2)),  // P1 Start
-            Scancode::Num2 => Some((1,1)),  // P2 Start
+            Scancode::Num5 => Some((1, 0)), // Credit
+            Scancode::Num1 => Some((1, 2)), // P1 Start
+            Scancode::Num2 => Some((1, 1)), // P2 Start
             _ => None,
         }
     }
