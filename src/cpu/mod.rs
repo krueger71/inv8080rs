@@ -1175,20 +1175,8 @@ impl Cpu {
     /// Set the flags for arithmetic operations taking into account carry using the before and after values
     fn set_flags_for_arithmetic(&mut self, before: u8, after: u8, carry: bool) {
         self.set_flag(Z, after == 0);
-        self.set_flag(S, ((after & 0b1000_0000) >> 7) == 1);
-        self.set_flag(
-            P,
-            (((after & 0b1000_0000) >> 7)
-                + ((after & 0b0100_0000) >> 6)
-                + ((after & 0b0010_0000) >> 5)
-                + ((after & 0b0001_0000) >> 4)
-                + ((after & 0b0000_1000) >> 3)
-                + ((after & 0b0000_0100) >> 2)
-                + ((after & 0b0000_0010) >> 1)
-                + (after & 0b0000_0001))
-                % 2
-                == 0,
-        );
+        self.set_flag(S, after & 0x80 == 0x80);
+        self.set_flag(P, after.count_ones() % 2 == 0);
         self.set_flag(CY, carry);
         self.set_flag(
             AC,
