@@ -174,20 +174,14 @@ impl Emu {
                     Event::KeyDown {
                         scancode: Some(scancode),
                         ..
-                    } => match self.keymap(scancode) {
-                        Some(control) => {
-                            self.cpu.set_bus_in_bit(control.0, control.1, true);
-                        }
-                        _ => (),
+                    } => if let Some((port, bit)) = self.keymap(scancode) {
+                        self.cpu.set_bus_in_bit(port, bit, true);
                     },
                     Event::KeyUp {
                         scancode: Some(scancode),
                         ..
-                    } => match self.keymap(scancode) {
-                        Some(control) => {
-                            self.cpu.set_bus_in_bit(control.0, control.1, false);
-                        }
-                        _ => (),
+                    } => if let Some((port, bit)) = self.keymap(scancode) {
+                        self.cpu.set_bus_in_bit(port, bit, false);
                     },
                     _ => {}
                 }
