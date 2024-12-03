@@ -1,4 +1,4 @@
-use crate::STACK;
+use crate::{RAM, STACK};
 
 use super::*;
 
@@ -77,20 +77,6 @@ fn set_memory() {
     let mut cpu = setup();
     cpu.set_memory(*RAM.start(), 0xAB);
     assert_eq!(0xAB, cpu.get_memory(*RAM.start()));
-}
-
-#[test]
-#[should_panic]
-fn set_memory_too_low() {
-    let mut cpu = setup();
-    cpu.set_memory(*ROM.end(), 0xAB);
-}
-
-#[test]
-#[should_panic]
-fn set_memory_too_high() {
-    let mut cpu = setup();
-    cpu.set_memory(*MEMORY.end() + 1, 0xAB);
 }
 
 #[test]

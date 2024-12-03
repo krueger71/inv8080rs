@@ -1,7 +1,7 @@
 //! CPU module
 
 use crate::{
-    utils::*, DISPLAY_HEIGHT, FRAMEBUFFER, MEMORY, MEMORY_SIZE, NPORTS, NREGS, RAM, ROM, STACK,
+    utils::*, DISPLAY_HEIGHT, FRAMEBUFFER, MEMORY, MEMORY_SIZE, NPORTS, NREGS, ROM, STACK,
 };
 use Condition::*;
 use Flag::*;
@@ -1111,13 +1111,8 @@ impl Cpu {
 
     /// Set memory
     fn set_memory(&mut self, addr: Address, data: Data) {
-        debug_assert!(
-            RAM.contains(&addr),
-            "Writing outside ram at {:04X} pc = {:04X}!",
-            addr,
-            self.pc
-        );
-        self.memory[addr] = data;
+        self.memory[0x2000 + addr % 0x2000] = data; // RAM mirroring (could be solved with a little bit more memory 0x41B8 instead of 0x4000)
+
         if FRAMEBUFFER.contains(&addr) {
             self.display_update = true;
         }
