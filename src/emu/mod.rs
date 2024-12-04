@@ -238,10 +238,16 @@ impl Emu {
     /// Match MAME controls somewhat
     fn keymap(&self, scancode: Scancode) -> Option<(usize, u8)> {
         match scancode {
-            Scancode::T => Some((2, 2)),    // Tilt
-            Scancode::Num5 => Some((1, 0)), // Credit
-            Scancode::Num1 => Some((1, 2)), // P1 Start
-            Scancode::Num2 => Some((1, 1)), // P2 Start
+            Scancode::T => Some((2, 2)),        // Tilt
+            Scancode::Num5 => Some((1, 0)),     // Credit
+            Scancode::Num1 => Some((1, 2)),     // P1 Start
+            Scancode::Num2 => Some((1, 1)),     // P2 Start
+            Scancode::LCtrl => Some((1, 4)),    // P1 Fire
+            Scancode::Left => Some((1, 5)),     // P1 Left
+            Scancode::Right => Some((1, 6)),    // P1 Left
+            Scancode::A => Some((2, 4)),        // P2 Fire
+            Scancode::D => Some((2, 5)),        // P2 Left
+            Scancode::G => Some((2, 6)),        // P3 Left
             _ => None,
         }
     }

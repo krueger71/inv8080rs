@@ -1048,6 +1048,10 @@ impl Cpu {
                 self.set_memory(addr + 1, self.get_register(H));
                 5
             }
+            DecimalAdjustAccumulator => {
+                // WTF?
+                1
+            }
             _ => panic!("Unimplemented {:04X?} now at {:04X?}", instr, self.pc),
         }
     }
