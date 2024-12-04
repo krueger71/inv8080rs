@@ -323,6 +323,11 @@ fn load_accumulator_indirect() {
 }
 
 #[test]
+fn store_accumulator_indirect() {
+    //panic!("Implement the test!");
+}
+
+#[test]
 #[should_panic]
 fn load_accumulator_indirect_hl() {
     let mut cpu = setup();
@@ -831,6 +836,11 @@ fn add_register() {
     assert_eq!(0, cpu.get_register(A));
     assert!(cpu.get_flag(CY));
     assert!(cpu.get_flag(Z));
+}
+
+#[test]
+fn add_register_with_carry() {
+    //panic!("Implement the test!");
 }
 
 #[test]

@@ -721,6 +721,18 @@ impl Cpu {
                 }
                 2
             }
+            StoreAccumulatorIndirect(rp) => {
+                match rp {
+                    BC | DE => {
+                        self.set_memory(
+                            self.get_register_pair(rp) as Address,
+                            self.get_register(A),
+                        );
+                    }
+                    _ => panic!("Invalid instruction {:04X?}", instr),
+                }
+                2
+            }
             MoveToMemory(r) => {
                 self.set_memory(self.get_register_pair(HL) as Address, self.get_register(r));
                 2
@@ -960,6 +972,15 @@ impl Cpu {
                 let before = self.get_register(A);
                 let data = self.get_register(r);
                 let (after, carry) = before.overflowing_add(data);
+                self.set_register(A, after);
+                self.set_flags_for_arithmetic(before, self.get_register(A), carry);
+                1
+            }
+            AddRegisterWithCarry(r) => {
+                let before = self.get_register(A);
+                let data = self.get_register(r);
+                let (after, carry) =
+                    before.overflowing_add(data + if self.get_flag(CY) { 1 } else { 0 });
                 self.set_register(A, after);
                 self.set_flags_for_arithmetic(before, self.get_register(A), carry);
                 1
