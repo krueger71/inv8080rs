@@ -961,36 +961,20 @@ impl Cpu {
                 self.set_flags_for_arithmetic(before, self.get_register(A), false);
                 2
             }
-            AddImmediate(data) => {
-                let before = self.get_register(A);
-                let (after, carry) = before.overflowing_add(data);
-                self.set_register(A, after);
-                self.set_flags_for_arithmetic(before, self.get_register(A), carry);
+            AddImmediate(addend) => {
+                self.add(addend);
                 2
             }
             AddRegister(r) => {
-                let before = self.get_register(A);
-                let data = self.get_register(r);
-                let (after, carry) = before.overflowing_add(data);
-                self.set_register(A, after);
-                self.set_flags_for_arithmetic(before, self.get_register(A), carry);
+                self.add(self.get_register(r));
                 1
             }
             AddRegisterWithCarry(r) => {
-                let before = self.get_register(A);
-                let data = self.get_register(r);
-                let (after, carry) =
-                    before.overflowing_add(data + if self.get_flag(CY) { 1 } else { 0 });
-                self.set_register(A, after);
-                self.set_flags_for_arithmetic(before, self.get_register(A), carry);
+                self.add(self.get_register(r) + if self.get_flag(CY) { 1 } else { 0 });
                 1
             }
             AddMemory => {
-                let before = self.get_register(A);
-                let data = self.get_memory(self.get_register_pair(HL) as Address);
-                let (after, carry) = before.overflowing_add(data);
-                self.set_register(A, after);
-                self.set_flags_for_arithmetic(before, self.get_register(A), carry);
+                self.add(self.get_memory(self.get_register_pair(HL) as Address));
                 2
             }
             SubtractRegister(r) => {
@@ -1070,7 +1054,20 @@ impl Cpu {
                 5
             }
             DecimalAdjustAccumulator => {
-                // WTF?
+                let acc = self.get_register(A);
+                let mut new_acc = acc;
+
+                if acc & 0xF > 9 || self.get_flag(AC) {
+                    new_acc = new_acc.wrapping_add(0x6);
+                    self.set_flag(AC, true);
+                }
+
+                if acc > 0x99 || self.get_flag(CY) {
+                    new_acc = new_acc.wrapping_add(0x60);
+                    self.set_flag(CY, true);
+                }
+
+                self.set_register(A, new_acc);
                 1
             }
             _ => panic!("Unimplemented {:04X?} now at {:04X?}", instr, self.pc),
@@ -1202,6 +1199,19 @@ impl Cpu {
             AC,
             (before & 0b0000_1000 >> 3) == 1 && (after & 0b0001_0000 >> 4) == 1,
         );
+    }
+
+    /// Add and set flags
+    fn add(&mut self, addend: Data) {
+        let acc = self.get_register(A);
+
+        self.set_flag(AC, (acc & 0xF) + (addend & 0xF) > 0xF);
+        let (result, carry) = acc.overflowing_add(addend);
+        self.set_register(A, result);
+        self.set_flag(CY, carry);
+        self.set_flag(Z, result == 0);
+        self.set_flag(S, result & 0x80 == 0x80);
+        self.set_flag(P, result.count_ones() % 2 == 0);
     }
 
     /// Set register pair

@@ -1055,3 +1055,23 @@ fn complement_accumulator() {
     assert_eq!(1, cpu.execute(ComplementAccumulator));
     assert_eq!(0b0101_0101, cpu.get_register(A));
 }
+
+#[test]
+fn add() {
+    let mut cpu = setup();
+    cpu.add(0);
+    assert_eq!(0, cpu.get_register(A));
+    assert!(!cpu.get_flag(AC));
+    assert!(!cpu.get_flag(CY));
+    cpu.add(0x10);
+    assert!(!cpu.get_flag(AC));
+    assert!(!cpu.get_flag(CY));
+    cpu.set_register(A, 0x8);
+    cpu.add(0x8);
+    assert!(cpu.get_flag(AC));
+    assert!(!cpu.get_flag(CY));
+    cpu.add(0xFF - 0x10 + 1);
+    assert!(!cpu.get_flag(AC));
+    assert!(cpu.get_flag(CY));
+    assert_eq!(0, cpu.get_register(A));
+}
