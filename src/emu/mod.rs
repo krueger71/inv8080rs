@@ -6,6 +6,7 @@ use std::{
 };
 
 use sdl2::{
+    audio::{AudioCallback, AudioSpecDesired},
     event::Event,
     keyboard::{Keycode, Scancode},
     pixels::{Color, PixelFormatEnum},
@@ -13,7 +14,7 @@ use sdl2::{
     render::BlendMode,
 };
 
-use crate::{cpu::Cpu, DISPLAY_HEIGHT, DISPLAY_WIDTH, FPS, FREQ};
+use crate::{cpu::Cpu, utils::get_bit, DISPLAY_HEIGHT, DISPLAY_WIDTH, FPS, FREQ};
 
 #[cfg(test)]
 mod tests;
@@ -56,8 +57,7 @@ impl Emu {
 
     pub fn run(&mut self) {
         let sdl2 = sdl2::init().expect("Could not initialize SDL");
-        let mut canvas =
-            sdl2
+        let mut canvas = sdl2
             .video()
             .expect("Could not initialize video")
             .window(
@@ -148,24 +148,56 @@ impl Emu {
 
         let audio_subsystem = sdl2.audio().expect("Could not initialize audio");
 
-        println!(
-            "{} {:?}",
-            audio_subsystem.current_audio_driver(),
-            audio_subsystem
-        );
+        let desired_spec = AudioSpecDesired {
+            freq: Some(44100),
+            channels: Some(1), // mono
+            samples: None,
+        };
+
+        println!("{}", audio_subsystem.current_audio_driver(),);
+
+        let device = audio_subsystem
+            .open_playback(None, &desired_spec, |spec| {
+                // initialize the audio callback
+                SquareWave {
+                    phase_inc: 1760_f32 / spec.freq as f32,
+                    phase: 0.0,
+                    volume: 0.25,
+                }
+            })
+            .expect("Could not create audio device");
 
         let mut events = sdl2.event_pump().expect("Could not get event pump");
         let cycles_per_frame = self.freq / self.fps;
 
+        let mut playing = [false; 9];
+
         while !self.quit {
             let t = Instant::now();
 
-            // Handle input
+            // Handle input/controls
             self.handle_input(&mut events);
 
             // Run correct number of cycles, generate interrupts etc
             self.run_cpu(cycles_per_frame);
 
+            // Handle sound
+            let port3 = self.cpu.get_bus_out(3);
+            let _port5 = self.cpu.get_bus_out(5);
+
+            if get_bit(port3, 1) {
+                if !playing[1] {
+                    playing[1] = true;
+                    println!("Shot audio on");
+                    device.resume();
+                }
+            } else if playing[1] {
+                playing[1] = false;
+                println!("Shot audio off");
+                device.pause();
+            }
+
+            // Handle display
             if self.cpu.get_display_update() {
                 canvas.set_draw_color(background_color);
                 canvas.clear();
@@ -174,13 +206,17 @@ impl Emu {
                 for y in 0..DISPLAY_HEIGHT {
                     for x in 0..DISPLAY_WIDTH {
                         if self.cpu.display(x, y) {
-                            canvas.draw_point(Point::new(x as i32, y as i32)).expect("Could not draw pixel on display");
+                            canvas
+                                .draw_point(Point::new(x as i32, y as i32))
+                                .expect("Could not draw pixel on display");
                         }
                     }
                 }
 
                 // Copy grid texture on top to give a slight pixelated look
-                canvas.copy(&grid, None, None).expect("Could not copy texture to canvas");
+                canvas
+                    .copy(&grid, None, None)
+                    .expect("Could not copy texture to canvas");
 
                 canvas.present();
 
@@ -192,8 +228,8 @@ impl Emu {
     }
 
     fn sleep_before_next_frame(&mut self, instant_at_start_of_frame: Instant) {
-        let sleep_duration =
-            (1_000_000_000_i64 / self.fps as i64) - instant_at_start_of_frame.elapsed().as_nanos() as i64;
+        let sleep_duration = (1_000_000_000_i64 / self.fps as i64)
+            - instant_at_start_of_frame.elapsed().as_nanos() as i64;
 
         if sleep_duration >= 0 {
             sleep(Duration::new(0, sleep_duration as u32));
@@ -259,6 +295,28 @@ impl Emu {
             Scancode::D => Some((2, 5)),     // P2 Left
             Scancode::G => Some((2, 6)),     // P3 Left
             _ => None,
+        }
+    }
+}
+
+struct SquareWave {
+    phase_inc: f32,
+    phase: f32,
+    volume: f32,
+}
+
+impl AudioCallback for SquareWave {
+    type Channel = f32;
+
+    fn callback(&mut self, out: &mut [f32]) {
+        // Generate a square wave
+        for x in out.iter_mut() {
+            *x = if self.phase <= 0.5 {
+                self.volume
+            } else {
+                -self.volume
+            };
+            self.phase = (self.phase + self.phase_inc) % 1.0;
         }
     }
 }
