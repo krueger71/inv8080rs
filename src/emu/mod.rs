@@ -6,7 +6,7 @@ use std::{
 };
 
 use sdl2::{
-    audio::{AudioCallback, AudioSpecDesired},
+    audio::{AudioSpecDesired, AudioSpecWAV},
     event::Event,
     keyboard::{Keycode, Scancode},
     pixels::{Color, PixelFormatEnum},
@@ -147,25 +147,17 @@ impl Emu {
         );
 
         let audio_subsystem = sdl2.audio().expect("Could not initialize audio");
-
-        let desired_spec = AudioSpecDesired {
-            freq: Some(44100),
-            channels: Some(1), // mono
+        let audio_spec = AudioSpecDesired {
+            channels: None,
+            freq: None,
             samples: None,
         };
+        let queue = audio_subsystem.open_queue::<u8, _>(None, &audio_spec).expect("Could not create audio queue");
+        let wav_spec = AudioSpecWAV::load_wav("roms/shot.wav").expect("Could not load wav");
+        queue.resume();
+        //audio_subsystem.
 
-        println!("{}", audio_subsystem.current_audio_driver(),);
-
-        let device = audio_subsystem
-            .open_playback(None, &desired_spec, |spec| {
-                // initialize the audio callback
-                SquareWave {
-                    phase_inc: 1760_f32 / spec.freq as f32,
-                    phase: 0.0,
-                    volume: 0.25,
-                }
-            })
-            .expect("Could not create audio device");
+        println!("{:?}", wav_spec.format);
 
         let mut events = sdl2.event_pump().expect("Could not get event pump");
         let cycles_per_frame = self.freq / self.fps;
@@ -189,12 +181,13 @@ impl Emu {
                 if !playing[1] {
                     playing[1] = true;
                     println!("Shot audio on");
-                    device.resume();
+                    queue.queue_audio(wav_spec.buffer()).expect("Could not queue audio");
+                    queue.resume();
                 }
             } else if playing[1] {
                 playing[1] = false;
                 println!("Shot audio off");
-                device.pause();
+                queue.pause();
             }
 
             // Handle display
@@ -295,28 +288,6 @@ impl Emu {
             Scancode::D => Some((2, 5)),     // P2 Left
             Scancode::G => Some((2, 6)),     // P3 Left
             _ => None,
-        }
-    }
-}
-
-struct SquareWave {
-    phase_inc: f32,
-    phase: f32,
-    volume: f32,
-}
-
-impl AudioCallback for SquareWave {
-    type Channel = f32;
-
-    fn callback(&mut self, out: &mut [f32]) {
-        // Generate a square wave
-        for x in out.iter_mut() {
-            *x = if self.phase <= 0.5 {
-                self.volume
-            } else {
-                -self.volume
-            };
-            self.phase = (self.phase + self.phase_inc) % 1.0;
         }
     }
 }
