@@ -148,9 +148,21 @@ impl Emu {
         );
 
         let audio_subsystem = sdl2.audio().expect("Could not initialize audio");
-
+        let mut sounds: [(u8, u8, &str, bool); 8] = [
+            (3, 0, "ufo", false),  // Ufo movement
+            (3, 1, "shot", false), // Player shoots
+            (3, 2, "die", false),  // Player dies
+            (3, 3, "hit", false),  // Invader hit
+            // (3, 4, "xp"),   // Extended play?
+            // (3, 5, "amp"),  // Amp enable??
+            (5, 0, "fleet", false), // Fleet 1
+            (5, 1, "fleet", false), // Fleet 2
+            (5, 2, "fleet", false), // Fleet 3
+            (5, 3, "fleet", false), // Fleet 4
+                                    // (5, 4, "ufo_hit"), // Fleet 4
+        ];
         let mut wav_specs: HashMap<&str, AudioSpecWAV> = HashMap::new();
-        for w in ["shot", "hit"] {
+        for (_, _, w, _) in sounds {
             wav_specs.insert(
                 w,
                 AudioSpecWAV::load_wav(format!("roms/{}.wav", w)).expect("Could not load wav"),
@@ -171,7 +183,7 @@ impl Emu {
         let mut events = sdl2.event_pump().expect("Could not get event pump");
         let cycles_per_frame = self.freq / self.fps;
 
-        let mut playing = [false; 9];
+        //let mut playing = [false; 9];
 
         while !self.quit {
             let t = Instant::now();
@@ -183,29 +195,17 @@ impl Emu {
             self.run_cpu(cycles_per_frame);
 
             // Handle sound
-            let port3 = self.cpu.get_bus_out(3);
-            let _port5 = self.cpu.get_bus_out(5);
-
-            if get_bit(port3, 1) {
-                if !playing[1] {
-                    playing[1] = true;
-                    queue
-                        .queue_audio(wav_specs["shot"].buffer())
-                        .expect("Could not queue audio");
+            for (port, bit, sound, playing) in &mut sounds {
+                if get_bit(self.cpu.get_bus_out((*port).into()), *bit) {
+                    if !(*playing) {
+                        *playing = true;
+                        queue
+                            .queue_audio(wav_specs[sound].buffer())
+                            .expect("Could not queue audio");
+                    }
+                } else if *playing {
+                    *playing = false;
                 }
-            } else if playing[1] {
-                playing[1] = false;
-            }
-
-            if get_bit(port3, 3) {
-                if !playing[2] {
-                    playing[2] = true;
-                    queue
-                        .queue_audio(wav_specs["hit"].buffer())
-                        .expect("Could not queue audio");
-                }
-            } else if playing[1] {
-                playing[2] = false;
             }
 
             // Handle display
