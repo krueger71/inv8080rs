@@ -29,6 +29,10 @@ pub struct Options {
     pub color: u32,
     /// Background color
     pub background: u32,
+    /// Color of top overlay
+    pub top: u32,
+    /// Color of bottom overlay
+    pub bottom: u32,
 }
 
 /// The state of the emulator
@@ -90,6 +94,20 @@ impl Emu {
             ((self.options.color & 0xff000000) >> 24) as u8,
         );
 
+        let top_color = Color::RGBA(
+            ((self.options.top & 0xff0000) >> 16) as u8,
+            ((self.options.top & 0x00ff00) >> 8) as u8,
+            (self.options.top & 0x0000ff) as u8,
+            ((self.options.top & 0xff000000) >> 24) as u8,
+        );
+
+        let bottom_color = Color::RGBA(
+            ((self.options.bottom & 0xff0000) >> 16) as u8,
+            ((self.options.bottom & 0x00ff00) >> 8) as u8,
+            (self.options.bottom & 0x0000ff) as u8,
+            ((self.options.bottom & 0xff000000) >> 24) as u8,
+        );
+
         // Create an overlay grid for pixelation effect as a texture
         let texture_creator = canvas.texture_creator();
         let mut grid = texture_creator
@@ -103,10 +121,10 @@ impl Emu {
 
         canvas
             .with_texture_canvas(&mut grid, |c| {
-                let mut grid_color = background_color;
-                grid_color.a = 0x48;
-                c.set_draw_color(grid_color);
                 // Draw horizontal lines
+                let mut grid_color = background_color;
+                grid_color.a = 0x20;
+                c.set_draw_color(grid_color);
                 for y in 0..(DISPLAY_HEIGHT * self.options.scale as u32) {
                     if y % (self.options.scale as u32) == 0 {
                         c.draw_line(
@@ -116,7 +134,10 @@ impl Emu {
                         .expect("Could not draw horizontal lines on texture");
                     }
                 }
+
                 // Draw vertical lines
+                grid_color.a = 0x7;
+                c.set_draw_color(grid_color);
                 for x in 0..(DISPLAY_WIDTH * self.options.scale as u32) {
                     if x % (self.options.scale as u32) == 0 {
                         c.draw_line(
@@ -214,7 +235,37 @@ impl Emu {
                 canvas.clear();
                 canvas.set_draw_color(foreground_color);
 
-                for y in 0..DISPLAY_HEIGHT {
+                for y in 0..32 {
+                    for x in 0..DISPLAY_WIDTH {
+                        if self.cpu.display(x, y) {
+                            canvas
+                                .draw_point(Point::new(x as i32, y as i32))
+                                .expect("Could not draw pixel on display");
+                        }
+                    }
+                }
+                canvas.set_draw_color(top_color);
+                for y in 32..64 {
+                    for x in 0..DISPLAY_WIDTH {
+                        if self.cpu.display(x, y) {
+                            canvas
+                                .draw_point(Point::new(x as i32, y as i32))
+                                .expect("Could not draw pixel on display");
+                        }
+                    }
+                }
+                canvas.set_draw_color(foreground_color);
+                for y in 64..184 {
+                    for x in 0..DISPLAY_WIDTH {
+                        if self.cpu.display(x, y) {
+                            canvas
+                                .draw_point(Point::new(x as i32, y as i32))
+                                .expect("Could not draw pixel on display");
+                        }
+                    }
+                }
+                canvas.set_draw_color(bottom_color);
+                for y in 184..DISPLAY_HEIGHT {
                     for x in 0..DISPLAY_WIDTH {
                         if self.cpu.display(x, y) {
                             canvas
