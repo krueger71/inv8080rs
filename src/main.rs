@@ -12,7 +12,7 @@ fn main() {
             color: 0xffeeeeee,      // ARGB8888 -> CRT phosphor green (33ff00), "white" (eeeeee)
             background: 0xff111111, // ARGB8888 -> almost black (111111)
             top: 0xffff0000,
-            bottom: 0xff33ff00
+            bottom: 0xff33ff00,
         },
     );
 

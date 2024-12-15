@@ -1,13 +1,12 @@
 //! Emulator implementation using SDL2 for I/O
 
 use std::{
-    collections::HashMap,
     thread::sleep,
     time::{Duration, Instant},
 };
 
 use sdl2::{
-    audio::{AudioSpecDesired, AudioSpecWAV},
+    audio::{AudioQueue, AudioSpecDesired, AudioSpecWAV},
     event::Event,
     keyboard::{Keycode, Scancode},
     pixels::{Color, PixelFormatEnum},
@@ -169,42 +168,46 @@ impl Emu {
         );
 
         let audio_subsystem = sdl2.audio().expect("Could not initialize audio");
-        let mut sounds: [(u8, u8, &str, bool); 8] = [
-            (3, 0, "ufo", false),  // Ufo movement
-            (3, 1, "shot", false), // Player shoots
-            (3, 2, "die", false),  // Player dies
-            (3, 3, "hit", false),  // Invader hit
+        let mut sounds: [(
+            u8,
+            u8,
+            &str,
+            Option<AudioQueue<u8>>,
+            Option<AudioSpecWAV>,
+            bool,
+        ); 8] = [
+            (3, 0, "ufo", None, None, false),  // Ufo movement
+            (3, 1, "shot", None, None, false), // Player shoots
+            (3, 2, "die", None, None, false),  // Player dies
+            (3, 3, "hit", None, None, false),  // Invader hit
             // (3, 4, "xp"),   // Extended play?
             // (3, 5, "amp"),  // Amp enable??
-            (5, 0, "fleet", false), // Fleet 1
-            (5, 1, "fleet", false), // Fleet 2
-            (5, 2, "fleet", false), // Fleet 3
-            (5, 3, "fleet", false), // Fleet 4
-                                    // (5, 4, "ufo_hit"), // Fleet 4
+            (5, 0, "fleet", None, None, false), // Fleet 1
+            (5, 1, "fleet", None, None, false), // Fleet 2
+            (5, 2, "fleet", None, None, false), // Fleet 3
+            (5, 3, "fleet", None, None, false), // Fleet 4
+                                                // (5, 4, "ufo_hit"), // Fleet 4
         ];
-        let mut wav_specs: HashMap<&str, AudioSpecWAV> = HashMap::new();
-        for (_, _, w, _) in sounds {
-            wav_specs.insert(
-                w,
-                AudioSpecWAV::load_wav(format!("roms/{}.wav", w)).expect("Could not load wav"),
-            );
-        }
 
         let audio_spec = AudioSpecDesired {
-            channels: Some(wav_specs["shot"].channels),
-            freq: Some(wav_specs["shot"].freq),
+            channels: Some(1),
+            freq: Some(11025),
             samples: None,
         };
 
-        let queue = audio_subsystem
-            .open_queue(None, &audio_spec)
-            .expect("Could not create audio queue");
-        queue.resume();
+        for (_, _, w, queue, wav, _) in &mut sounds {
+            *wav = Some(
+                AudioSpecWAV::load_wav(format!("roms/{}.wav", w)).expect("Could not load wav"),
+            );
+            *queue = Some(
+                audio_subsystem
+                    .open_queue(None, &audio_spec)
+                    .expect("Could not create audio queue"),
+            );
+        }
 
         let mut events = sdl2.event_pump().expect("Could not get event pump");
         let cycles_per_frame = self.freq / self.fps;
-
-        //let mut playing = [false; 9];
 
         while !self.quit {
             let t = Instant::now();
@@ -216,13 +219,14 @@ impl Emu {
             self.run_cpu(cycles_per_frame);
 
             // Handle sound
-            for (port, bit, sound, playing) in &mut sounds {
+            for (port, bit, _, queue, wav, playing) in &mut sounds {
                 if get_bit(self.cpu.get_bus_out((*port).into()), *bit) {
                     if !(*playing) {
                         *playing = true;
-                        queue
-                            .queue_audio(wav_specs[sound].buffer())
-                            .expect("Could not queue audio");
+                        let q = queue.as_ref().expect("No audio queue for sound");
+                        let w = wav.as_ref().expect("No audio content for sound");
+                        q.queue_audio(w.buffer()).expect("Could not queue audio");
+                        q.resume();
                     }
                 } else if *playing {
                     *playing = false;
