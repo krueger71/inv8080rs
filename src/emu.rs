@@ -168,14 +168,16 @@ impl Emu {
         );
 
         let audio_subsystem = sdl2.audio().expect("Could not initialize audio");
-        let mut sounds: [(
+        type SoundState<'a> = (
             u8,
             u8,
-            &str,
+            &'a str,
             Option<AudioQueue<u8>>,
             Option<AudioSpecWAV>,
             bool,
-        ); 8] = [
+        );
+
+        let mut sounds: [SoundState; 8] = [
             (3, 0, "ufo", None, None, false),  // Ufo movement
             (3, 1, "shot", None, None, false), // Player shoots
             (3, 2, "die", None, None, false),  // Player dies
