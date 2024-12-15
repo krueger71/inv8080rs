@@ -237,44 +237,21 @@ impl Emu {
             if self.cpu.get_display_update() {
                 canvas.set_draw_color(background_color);
                 canvas.clear();
-                canvas.set_draw_color(foreground_color);
 
-                for y in 0..32 {
-                    for x in 0..DISPLAY_WIDTH {
-                        if self.cpu.display(x, y) {
-                            canvas
-                                .draw_point(Point::new(x as i32, y as i32))
-                                .expect("Could not draw pixel on display");
-                        }
-                    }
-                }
-                canvas.set_draw_color(top_color);
-                for y in 32..64 {
-                    for x in 0..DISPLAY_WIDTH {
-                        if self.cpu.display(x, y) {
-                            canvas
-                                .draw_point(Point::new(x as i32, y as i32))
-                                .expect("Could not draw pixel on display");
-                        }
-                    }
-                }
-                canvas.set_draw_color(foreground_color);
-                for y in 64..184 {
-                    for x in 0..DISPLAY_WIDTH {
-                        if self.cpu.display(x, y) {
-                            canvas
-                                .draw_point(Point::new(x as i32, y as i32))
-                                .expect("Could not draw pixel on display");
-                        }
-                    }
-                }
-                canvas.set_draw_color(bottom_color);
-                for y in 184..DISPLAY_HEIGHT {
-                    for x in 0..DISPLAY_WIDTH {
-                        if self.cpu.display(x, y) {
-                            canvas
-                                .draw_point(Point::new(x as i32, y as i32))
-                                .expect("Could not draw pixel on display");
+                for (color, range) in [
+                    (foreground_color, 0..32),
+                    (top_color, 32..64),
+                    (foreground_color, 64..184),
+                    (bottom_color, 184..DISPLAY_HEIGHT),
+                ] {
+                    canvas.set_draw_color(color);
+                    for y in range {
+                        for x in 0..DISPLAY_WIDTH {
+                            if self.cpu.display(x, y) {
+                                canvas
+                                    .draw_point(Point::new(x as i32, y as i32))
+                                    .expect("Could not draw pixel on display");
+                            }
                         }
                     }
                 }
