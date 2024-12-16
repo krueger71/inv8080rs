@@ -244,7 +244,8 @@ impl Emu {
                     (foreground_color, 0..32),
                     (top_color, 32..64),
                     (foreground_color, 64..184),
-                    (bottom_color, 184..DISPLAY_HEIGHT),
+                    (bottom_color, 184..240),
+                    (foreground_color, 240..DISPLAY_HEIGHT),
                 ] {
                     canvas.set_draw_color(color);
                     for y in range {
