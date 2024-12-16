@@ -4,11 +4,13 @@
 
 Original version that ran on the Taito 8080 hardware.
 
+![screenshot](screenshot.png)
+
 ## Running the emulator
 
 The game rom cannot be distributed here for copyright reasons. Sound samples are available in the [assets](assets)-folder. Sounds were created by the author at [jsfxr](https://sfxr.me/) with the same copyright as the code. Sounds could be customized with other samples if filenames and format are kept as-is (8-bit mono 11025Hz).
 
-Sounds and the game rom should be located in a common folder called `assets` as a sub-directory in the current working directory. The game rom should be in one single file called `invaders.rom`, with the whole program in correct order. The execute the binary `inv8080rs` to start the emulator.
+Sounds and the game rom should be located in a common folder called `assets` as a sub-directory in the current working directory. The game rom should be in one single file called `invaders.rom`, with the whole program in correct order. Then execute the binary `inv8080rs` to start the emulator.
 
 ## Design notes
 
@@ -48,7 +50,7 @@ Sounds and the game rom should be located in a common folder called `assets` as 
 - [Space Invaders Emulator](https://www.justin-credible.net/2020/03/31/space-invaders-emulator/)
 - [System 16 - The Arcade Museum](https://www.system16.com/hardware.php?id=629), some non-technical info about the Taito 8080 hardware used for Space Invaders among others. Links to some cool old advertising flyers.
 - [Intel 8080 OPCODES](https://pastraiser.com/cpu/i8080/i8080_opcodes.html), compact table of the Intel 8080 instructions and flags.
-- [Emutalk - Space Invaders thread](https://www.emutalk.net/threads/space-invaders.38177/page-2), some VERY! helpful insights by people having the same bugs as me.
-- [Intel 8080 Microcomputer Systems User's Manual](https://www.google.com/search?q=Intel+8080+Microcomputer+Systems+User's+Manual), from september 1975. The PDF can be found online 😇 and I suspect the original is out of print. Chapter 4 - Instruction Set is invaluable.
-- [Intel 8080 Assembly Language Programming Manual](https://www.google.com/search?client=firefox-b-d&q=Intel+8080+Assembly+Language+Programming+Manual), also from 1975.It is also very useful to understand in more detail how to implement the opcodes correctly as well as understanding 8080 assembler code.
-- [Understanding the x86's Decimal Adjust after Addition (DAA) instruction](http://www.righto.com/2023/01/understanding-x86s-decimal-adjust-after.html)
+- [Emutalk - Space Invaders thread](https://www.emutalk.net/threads/space-invaders.38177/page-2), helpful insights by people having the same bugs as me.
+- **Intel 8080 Microcomputer Systems User's Manual**, from september 1975. Chapter 4 - Instruction Set is invaluable.
+- **Intel 8080 Assembly Language Programming Manual**, also from 1975. It is also very useful to understand in more detail how to implement the opcodes correctly as well as understanding 8080 assembler code.
+- [Understanding the x86's Decimal Adjust after Addition (DAA) instruction](http://www.righto.com/2023/01/understanding-x86s-decimal-adjust-after.html), DAA is needed for scoring and credits.
