@@ -177,18 +177,18 @@ impl Emu {
             bool,
         );
 
-        let mut sounds: [SoundState; 8] = [
+        let mut sounds: [SoundState; 10] = [
             (3, 0, "ufo", None, None, false),  // Ufo movement
             (3, 1, "shot", None, None, false), // Player shoots
             (3, 2, "die", None, None, false),  // Player dies
             (3, 3, "hit", None, None, false),  // Invader hit
-            // (3, 4, "xp"),   // Extended play?
-            // (3, 5, "amp"),  // Amp enable??
-            (5, 0, "fleet", None, None, false), // Fleet 1
-            (5, 1, "fleet", None, None, false), // Fleet 2
-            (5, 2, "fleet", None, None, false), // Fleet 3
-            (5, 3, "fleet", None, None, false), // Fleet 4
-                                                // (5, 4, "ufo_hit"), // Fleet 4
+            (3, 4, "xp", None, None, false),   // Extended play?
+            // (3, 5, "amp"),  // Amp enable, turn on/off all sounds?
+            (5, 0, "fleet1", None, None, false),  // Fleet 1
+            (5, 1, "fleet2", None, None, false),  // Fleet 2
+            (5, 2, "fleet1", None, None, false),  // Fleet 3
+            (5, 3, "fleet2", None, None, false),  // Fleet 4
+            (5, 4, "ufo_hit", None, None, false), // Fleet 4
         ];
 
         let audio_spec = AudioSpecDesired {
