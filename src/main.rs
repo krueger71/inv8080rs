@@ -4,7 +4,7 @@ use inv8080rs::{
 };
 
 fn main() {
-    let program = std::fs::read("roms/invaders.rom").expect("could not read file");
+    let program = std::fs::read("assets/invaders.rom").expect("could not read file");
     let mut emu = Emu::new(
         Cpu::new(program),
         Options {
