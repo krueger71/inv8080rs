@@ -22,6 +22,8 @@ Sounds and the game rom should be located in a common folder called `assets` as 
 
 * [emu.rs](src/emu.rs) SDL2-based I/O (keyboard, graphics, sound).
 
+  Runs the cpu-model in a loop at approximately the original speed (2 MHz) with the original 60 Hz display update. Two interrupts are generated during each frame (one in the middle of execution and one at the end). The execution is single-threaded.
+
   The framebuffer is a piece of RAM-memory that needs to be rotated 90 degrees ccw before display. This transformation is done on-the-fly in the cpu:s `display`-function. The colored overlay is handled by drawing the display in several passes in different colors. The band at the bottom with remaining ships and score is not exactly as in the arcade game. The remaining ships are white here, not green. A slight retro pixelated effect is applied via alpha-blending of a grid on top of the game scene.
 
   Sound is handled with queues for each individual sample. Each sample is played only once while the corresponding bit is set. The looping feature for the UFO-sound has not been implemented.
