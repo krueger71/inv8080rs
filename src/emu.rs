@@ -283,18 +283,14 @@ impl Emu {
     }
 
     fn run_cpu(&mut self, cycles_per_frame: u32) {
-        let mut cycles: u32 = 0;
+        for i in [1, 2] {
+            let mut cycles: u32 = 0;
 
-        let mut halfway = false;
-        while cycles < cycles_per_frame {
-            cycles += self.cpu.step();
-            // Interrupts should happen in the middle of frame and at the end
-            if !halfway && (cycles > cycles_per_frame / 2) {
-                cycles += self.cpu.interrupt(1);
-                halfway = true;
+            while cycles < cycles_per_frame / 2 {
+                cycles += self.cpu.step();
             }
+            self.cpu.interrupt(i);
         }
-        self.cpu.interrupt(2);
     }
 
     fn handle_input(&mut self, events: &mut sdl2::EventPump) {
