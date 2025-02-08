@@ -682,32 +682,32 @@ impl Cpu {
     /// Execute one instruction and return number of cycles taken
     fn execute(&mut self, instr: Instruction) -> u32 {
         match instr {
-            NoOperation => 1,
+            NoOperation => 4,
             Jump(addr) => {
                 self.set_pc(addr);
-                3
+                10
             }
             JumpHLIndirect => {
                 self.set_pc(self.get_register_pair(HL) as Address);
-                1
+                5
             }
             LoadRegisterPairImmediate(rp, data) => {
                 self.set_register_pair(rp, data);
-                3
+                10
             }
             MoveImmediate(r, data) => {
                 self.set_register(r, data);
-                2
+                7
             }
             Call(addr) => {
                 self.push(self.get_pc());
                 self.set_pc(addr);
-                5
+                17
             }
             Return => {
                 let addr = self.pop();
                 self.set_pc(addr);
-                3
+                10
             }
             LoadAccumulatorIndirect(rp) => {
                 match rp {
@@ -719,7 +719,7 @@ impl Cpu {
                     }
                     _ => panic!("Invalid instruction {:04X?}", instr),
                 }
-                2
+                7
             }
             StoreAccumulatorIndirect(rp) => {
                 match rp {
@@ -731,35 +731,35 @@ impl Cpu {
                     }
                     _ => panic!("Invalid instruction {:04X?}", instr),
                 }
-                2
+                7
             }
             MoveToMemory(r) => {
                 self.set_memory(self.get_register_pair(HL) as Address, self.get_register(r));
-                2
+                7
             }
             IncrementRegisterPair(rp) => {
                 let (val, _) = self.get_register_pair(rp).overflowing_add(1);
                 self.set_register_pair(rp, val);
-                1
+                5
             }
             DecrementRegisterPair(rp) => {
                 let (val, _) = self.get_register_pair(rp).overflowing_sub(1);
                 self.set_register_pair(rp, val);
-                1
+                5
             }
             DecrementRegister(r) => {
                 let before = self.get_register(r);
                 let (after, _) = before.overflowing_sub(1);
                 self.set_register(r, after);
                 self.set_flags_for_arithmetic(before, after, self.get_flag(CY));
-                1
+                5
             }
             IncrementRegister(r) => {
                 let before = self.get_register(r);
                 let (after, _) = before.overflowing_add(1);
                 self.set_register(r, after);
                 self.set_flags_for_arithmetic(before, after, self.get_flag(CY));
-                1
+                5
             }
             DecrementMemory => {
                 let addr = self.get_register_pair(HL) as Address;
@@ -767,7 +767,7 @@ impl Cpu {
                 let (after, _) = before.overflowing_sub(1);
                 self.set_memory(addr, after);
                 self.set_flags_for_arithmetic(before, after, self.get_flag(CY));
-                3
+                10
             }
             IncrementMemory => {
                 let addr = self.get_register_pair(HL) as Address;
@@ -775,59 +775,59 @@ impl Cpu {
                 let (after, _) = before.overflowing_add(1);
                 self.set_memory(addr, after);
                 self.set_flags_for_arithmetic(before, after, self.get_flag(CY));
-                3
+                10
             }
             ConditionalJump(c, addr) => {
                 if self.is_condition(c) {
                     self.set_pc(addr);
                 }
-                3
+                10
             }
             ConditionalCall(c, addr) => {
                 if self.is_condition(c) {
                     self.push(self.get_pc());
                     self.set_pc(addr);
-                    5
+                    17
                 } else {
-                    3
+                    11
                 }
             }
             ConditionalReturn(c) => {
                 if self.is_condition(c) {
                     let addr = self.pop();
                     self.set_pc(addr);
-                    3
+                    11
                 } else {
-                    1
+                    5
                 }
             }
             MoveToMemoryImmediate(data) => {
                 self.set_memory(self.get_register_pair(HL) as Address, data);
-                3
+                10
             }
             MoveRegister(to, from) => {
                 self.set_register(to, self.get_register(from));
-                1
+                5
             }
             CompareImmediate(data) => {
                 let before = self.get_register(A);
                 let (after, carry) = before.overflowing_sub(data);
                 self.set_flags_for_arithmetic(before, after, carry);
-                2
+                7
             }
             CompareRegister(r) => {
                 let before = self.get_register(A);
                 let data = self.get_register(r);
                 let (after, carry) = before.overflowing_sub(data);
                 self.set_flags_for_arithmetic(before, after, carry);
-                1
+                4
             }
             CompareMemory => {
                 let before = self.get_register(A);
                 let data = self.get_memory(self.get_register_pair(HL) as Address);
                 let (after, carry) = before.overflowing_sub(data);
                 self.set_flags_for_arithmetic(before, after, carry);
-                2
+                7
             }
             Push(rp) => {
                 match rp {
@@ -838,7 +838,7 @@ impl Cpu {
                         panic!("Can't push SP");
                     }
                 }
-                3
+                11
             }
             Pop(rp) => {
                 match rp {
@@ -850,7 +850,7 @@ impl Cpu {
                         panic!("Can't pop SP");
                     }
                 }
-                3
+                10
             }
             AddRegisterPairToHL(rp) => {
                 let (value, carry) = self
@@ -858,13 +858,13 @@ impl Cpu {
                     .overflowing_add(self.get_register_pair(rp));
                 self.set_register_pair(HL, value);
                 self.set_flag(CY, carry);
-                3
+                10
             }
             ExchangeHLWithDE => {
                 let hl = self.get_register_pair(HL);
                 self.set_register_pair(HL, self.get_register_pair(DE));
                 self.set_register_pair(DE, hl);
-                1
+                4
             }
             ExchangeSPWithHL => {
                 let h = self.get_register(H);
@@ -875,45 +875,44 @@ impl Cpu {
                 self.set_register(H, sh);
                 self.set_memory(self.get_sp(), l);
                 self.set_memory(self.get_sp() + 1, h);
-
-                5
+                18
             }
             Output(port) => {
                 self.set_bus_out(port as usize, self.get_register(A));
-                3
+                10
             }
             Input(port) => {
                 let bus = self.get_bus_in(port as usize);
                 self.set_register(A, bus);
-                3
+                10
             }
             MoveFromMemory(r) => {
                 self.set_register(r, self.get_memory(self.get_register_pair(HL) as Address));
-                2
+                7
             }
             PushProcessorStatusWord => {
                 self.push_data(self.get_register(A));
                 self.push_data(self.get_flags());
-                3
+                11
             }
             PopProcessorStatusWord => {
                 let flags = self.pop_data();
                 self.set_flags(flags);
                 let a = self.pop_data();
                 self.set_register(A, a);
-                3
+                10
             }
             RotateRight => {
                 let acc = self.get_register(A);
                 self.set_flag(CY, get_bit(acc, 0));
                 self.set_register(A, acc.rotate_right(1));
-                1
+                4
             }
             RotateLeft => {
                 let acc = self.get_register(A);
                 self.set_flag(CY, get_bit(acc, 7));
                 self.set_register(A, acc.rotate_left(1));
-                1
+                4
             }
             RotateRightThroughCarry => {
                 let mut acc = self.get_register(A);
@@ -922,7 +921,7 @@ impl Cpu {
                 set_bit(&mut acc, 7, self.get_flag(CY));
                 self.set_flag(CY, low);
                 self.set_register(A, acc);
-                1
+                4
             }
             OrMemory => {
                 let before = self.get_register(A);
@@ -930,7 +929,7 @@ impl Cpu {
                 self.set_register(A, before | val);
                 self.set_flags_for_arithmetic(before, self.get_register(A), false);
                 self.set_flag(AC, false);
-                2
+                7
             }
             OrRegister(r) => {
                 let before = self.get_register(A);
@@ -938,44 +937,44 @@ impl Cpu {
                 self.set_register(A, before | val);
                 self.set_flags_for_arithmetic(before, self.get_register(A), false);
                 self.set_flag(AC, false);
-                1
+                4
             }
             OrImmediate(val) => {
                 let before = self.get_register(A);
                 self.set_register(A, before | val);
                 self.set_flags_for_arithmetic(before, self.get_register(A), false);
                 self.set_flag(AC, false);
-                2
+                7
             }
             AndImmediate(data) => {
                 let before = self.get_register(A);
                 self.set_register(A, before & data);
                 self.set_flags_for_arithmetic(before, self.get_register(A), false);
                 self.set_flag(AC, false);
-                2
+                7
             }
             AndMemory => {
                 let before = self.get_register(A);
                 let data = self.get_memory(self.get_register_pair(HL) as usize);
                 self.set_register(A, before & data);
                 self.set_flags_for_arithmetic(before, self.get_register(A), false);
-                2
+                7
             }
             AddImmediate(addend) => {
                 self.add(addend);
-                2
+                7
             }
             AddRegister(r) => {
                 self.add(self.get_register(r));
-                1
+                4
             }
             AddRegisterWithCarry(r) => {
                 self.add(self.get_register(r) + if self.get_flag(CY) { 1 } else { 0 });
-                1
+                4
             }
             AddMemory => {
                 self.add(self.get_memory(self.get_register_pair(HL) as Address));
-                2
+                7
             }
             SubtractRegister(r) => {
                 let before = self.get_register(A);
@@ -983,14 +982,14 @@ impl Cpu {
                 let (after, carry) = before.overflowing_sub(data);
                 self.set_register(A, after);
                 self.set_flags_for_arithmetic(before, self.get_register(A), carry);
-                1
+                4
             }
             SubtractImmediate(data) => {
                 let before = self.get_register(A);
                 let (after, carry) = before.overflowing_sub(data);
                 self.set_register(A, after);
                 self.set_flags_for_arithmetic(before, self.get_register(A), carry);
-                2
+                7
             }
             SubtractImmediateWithBorrow(data) => {
                 let before = self.get_register(A);
@@ -998,60 +997,60 @@ impl Cpu {
                     before.overflowing_sub(data + if self.get_flag(CY) { 1 } else { 0 });
                 self.set_register(A, after);
                 self.set_flags_for_arithmetic(before, self.get_register(A), carry);
-                2
+                7
             }
             LoadAccumulatorDirect(addr) => {
                 self.set_register(A, self.get_memory(addr));
-                4
+                13
             }
             StoreAccumulatorDirect(addr) => {
                 self.set_memory(addr, self.get_register(A));
-                4
+                13
             }
             ComplementAccumulator => {
                 self.set_register(A, self.get_register(A) ^ 0xFF);
-                1
+                4
             }
             XorRegister(r) => {
                 let before = self.get_register(A);
                 self.set_register(A, before ^ self.get_register(r));
                 self.set_flags_for_arithmetic(before, self.get_register(A), false);
                 self.set_flag(AC, false);
-                1
+                4
             }
             AndRegister(r) => {
                 let before = self.get_register(A);
                 self.set_register(A, before & self.get_register(r));
                 self.set_flags_for_arithmetic(before, self.get_register(A), false);
-                1
+                4
             }
             DisableInterrupts => {
                 self.interruptable = false;
-                1
+                4
             }
             EnableInterrupts => {
                 // TODO The CPU should be interruptable following the next instruction
                 self.interruptable = true;
-                1
+                4
             }
             Restart(data) => {
                 self.push(self.get_pc());
                 self.set_pc((8 * data as i32) as Address);
-                3
+                11
             }
             SetCarry => {
                 self.set_flag(CY, true);
-                1
+                4
             }
             LoadHLDirect(addr) => {
                 self.set_register(L, self.get_memory(addr));
                 self.set_register(H, self.get_memory(addr + 1));
-                5
+                16
             }
             StoreHLDirect(addr) => {
                 self.set_memory(addr, self.get_register(L));
                 self.set_memory(addr + 1, self.get_register(H));
-                5
+                16
             }
             DecimalAdjustAccumulator => {
                 let acc = self.get_register(A);
@@ -1068,7 +1067,7 @@ impl Cpu {
                 }
 
                 self.set_register(A, new_acc);
-                1
+                4
             }
             _ => panic!("Unimplemented {:04X?} now at {:04X?}", instr, self.pc),
         }
