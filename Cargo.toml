@@ -2,7 +2,7 @@
 name = "inv8080rs"
 version = "0.1.0"
 description = "Intel 8080 Space Invaders Emulator"
-authors = ["Fredrik Andersson <krueger71@users.noreply.github.com>"]
+authors = ["Fredrik Andersson"]
 license = "MIT"
 categories = ["emulators", "games"]
 keywords = ["emulator", "arcade", "8-bit", "intel-8080"]
