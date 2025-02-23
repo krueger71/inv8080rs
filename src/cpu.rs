@@ -312,7 +312,7 @@ impl Cpu {
         if port == 2 {
             self.offset = data & 0x7
         } else if port == 4 {
-            self.shift = (data as Data16) << 8 | self.shift >> 8;
+            self.shift = ((data as Data16) << 8) | (self.shift >> 8);
         }
 
         self.bus_out[port] = data
@@ -1197,7 +1197,7 @@ impl Cpu {
         self.set_flag(CY, carry);
         self.set_flag(
             AC,
-            (before & 0b0000_1000 >> 3) == 1 && (after & 0b0001_0000 >> 4) == 1,
+            (before & (0b0000_1000 >> 3)) == 1 && (after & (0b0001_0000 >> 4)) == 1,
         );
     }
 
@@ -1233,7 +1233,7 @@ impl Cpu {
         match rp {
             BC | DE | HL => {
                 let i = (rp as usize) * 2;
-                (self.registers[i] as u16) << 8 | self.registers[i + 1] as u16
+                ((self.registers[i] as u16) << 8) | self.registers[i + 1] as u16
             }
             SP => self.get_sp() as Data16,
         }
