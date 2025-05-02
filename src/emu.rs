@@ -9,7 +9,7 @@ use sdl2::{
     audio::{AudioQueue, AudioSpecDesired, AudioSpecWAV},
     event::Event,
     keyboard::{Keycode, Scancode},
-    pixels::{Color, PixelFormatEnum},
+    pixels::{Color, PixelFormat, PixelFormatEnum},
     rect::Point,
     render::BlendMode,
 };
@@ -60,6 +60,8 @@ impl Emu {
     }
 
     pub fn run(&mut self) {
+        const PIXEL_FORMAT_ENUM: PixelFormatEnum = PixelFormatEnum::ARGB8888;
+
         let sdl2 = sdl2::init().expect("Could not initialize SDL");
         let mut canvas = sdl2
             .video()
@@ -76,42 +78,26 @@ impl Emu {
             .build()
             .expect("Could not create canvas");
 
+        // The logical size is set to the size of the display. It makes it possible to draw single pixels at the correct position and get a scaled display automatically
+        canvas
+            .set_logical_size(DISPLAY_WIDTH, DISPLAY_HEIGHT)
+            .expect("Could not set a logical size for canvas");
         // Support alpha blending
         canvas.set_blend_mode(BlendMode::Blend);
 
-        let background_color = Color::RGBA(
-            ((self.options.background & 0xff0000) >> 16) as u8,
-            ((self.options.background & 0x00ff00) >> 8) as u8,
-            (self.options.background & 0x0000ff) as u8,
-            ((self.options.background & 0xff000000) >> 24) as u8,
-        );
+        let pixel_format =
+            PixelFormat::try_from(PIXEL_FORMAT_ENUM).expect("Could not convert pixel format enum");
 
-        let foreground_color = Color::RGBA(
-            ((self.options.color & 0xff0000) >> 16) as u8,
-            ((self.options.color & 0x00ff00) >> 8) as u8,
-            (self.options.color & 0x0000ff) as u8,
-            ((self.options.color & 0xff000000) >> 24) as u8,
-        );
-
-        let top_color = Color::RGBA(
-            ((self.options.top & 0xff0000) >> 16) as u8,
-            ((self.options.top & 0x00ff00) >> 8) as u8,
-            (self.options.top & 0x0000ff) as u8,
-            ((self.options.top & 0xff000000) >> 24) as u8,
-        );
-
-        let bottom_color = Color::RGBA(
-            ((self.options.bottom & 0xff0000) >> 16) as u8,
-            ((self.options.bottom & 0x00ff00) >> 8) as u8,
-            (self.options.bottom & 0x0000ff) as u8,
-            ((self.options.bottom & 0xff000000) >> 24) as u8,
-        );
+        let background_color = Color::from_u32(&pixel_format, self.options.background);
+        let foreground_color = Color::from_u32(&pixel_format, self.options.color);
+        let top_color = Color::from_u32(&pixel_format, self.options.top);
+        let bottom_color = Color::from_u32(&pixel_format, self.options.bottom);
 
         // Create an overlay grid for pixelation effect as a texture
         let texture_creator = canvas.texture_creator();
         let mut grid = texture_creator
             .create_texture_target(
-                PixelFormatEnum::ARGB8888,
+                PIXEL_FORMAT_ENUM,
                 DISPLAY_WIDTH * self.options.scale as u32,
                 DISPLAY_HEIGHT * self.options.scale as u32,
             )
@@ -152,10 +138,7 @@ impl Emu {
             })
             .expect("Could not draw on texture");
 
-        // The logical size is set to the size of the display. It makes it possible to draw single pixels at the correct position and get a scaled display automatically
-        canvas
-            .set_logical_size(DISPLAY_WIDTH, DISPLAY_HEIGHT)
-            .expect("Could not set a logical size for canvas");
+
 
         println!(
             "{:?}, default_pixel_format: {:?}, scale: {:?}, logical_size: {:?}, output_size: {:?}, render_target_supported: {:?}",
