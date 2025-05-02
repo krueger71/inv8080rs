@@ -101,8 +101,13 @@ impl Emu {
                 DISPLAY_WIDTH * self.options.scale,
                 DISPLAY_HEIGHT * self.options.scale,
             )
-            .expect("Could not create texture");
+            .expect("Could not create grid texture");
         grid_texture.set_blend_mode(BlendMode::Blend);
+
+        let mut game_texture = texture_creator
+            .create_texture_target(PIXEL_FORMAT_ENUM, DISPLAY_WIDTH, DISPLAY_HEIGHT)
+            .expect("Could not create game texture");
+        game_texture.set_blend_mode(BlendMode::Blend);
 
         canvas
             .with_texture_canvas(&mut grid_texture, |c| {
@@ -215,32 +220,38 @@ impl Emu {
 
             // Handle display
             if self.cpu.get_display_update() {
-                canvas.set_draw_color(background_color);
-                canvas.clear();
+                canvas
+                    .with_texture_canvas(&mut game_texture, |c| {
+                        c.set_draw_color(background_color);
+                        c.clear();
 
-                for (color, range) in [
-                    (foreground_color, 0..32),
-                    (top_color, 32..64),
-                    (foreground_color, 64..184),
-                    (bottom_color, 184..240),
-                    (foreground_color, 240..DISPLAY_HEIGHT),
-                ] {
-                    canvas.set_draw_color(color);
-                    for y in range {
-                        for x in 0..DISPLAY_WIDTH {
-                            if self.cpu.display(x, y) {
-                                canvas
-                                    .draw_point(Point::new(x as i32, y as i32))
-                                    .expect("Could not draw pixel on display");
+                        for (color, range) in [
+                            (foreground_color, 0..32),
+                            (top_color, 32..64),
+                            (foreground_color, 64..184),
+                            (bottom_color, 184..240),
+                            (foreground_color, 240..DISPLAY_HEIGHT),
+                        ] {
+                            c.set_draw_color(color);
+                            for y in range {
+                                for x in 0..DISPLAY_WIDTH {
+                                    if self.cpu.display(x, y) {
+                                        c.draw_point(Point::new(x as i32, y as i32))
+                                            .expect("Could not draw pixel on display");
+                                    }
+                                }
                             }
                         }
-                    }
-                }
+                    })
+                    .expect("Could not render game frame");
 
+                canvas
+                    .copy(&game_texture, None, None)
+                    .expect("Could not copy game texture to canvas");
                 // Copy grid texture on top to give a slight pixelated look
                 canvas
                     .copy(&grid_texture, None, None)
-                    .expect("Could not copy texture to canvas");
+                    .expect("Could not copy grid texture to canvas");
 
                 canvas.present();
 
