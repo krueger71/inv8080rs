@@ -34,8 +34,16 @@ pub struct Options {
     pub bottom: u32,
 }
 
+type SoundState<'a> = (
+    u8,
+    u8,
+    &'a str,
+    Option<AudioQueue<u8>>,
+    Option<AudioSpecWAV>,
+    bool,
+);
 /// The state of the emulator
-pub struct Emu {
+pub struct Emu<'a> {
     /// CPU-model
     cpu: Cpu,
     /// Options
@@ -46,45 +54,85 @@ pub struct Emu {
     freq: u32,
     /// Emulator should quit
     quit: bool,
+    /// SDL Canvas<Window>
+    canvas: sdl2::render::Canvas<sdl2::video::Window>,
+    /// SDL Event Pump
+    event_pump: sdl2::EventPump,
+    /// Sound channels
+    sounds: [SoundState<'a>; 10],
 }
 
-impl Emu {
+const PIXEL_FORMAT_ENUM: PixelFormatEnum = PixelFormatEnum::ARGB8888;
+
+impl Emu<'_> {
     pub fn new(cpu: Cpu, options: Options) -> Self {
-        Emu {
-            cpu,
-            options,
-            fps: FPS,
-            freq: FREQ,
-            quit: false,
-        }
-    }
-
-    pub fn run(&mut self) {
-        const PIXEL_FORMAT_ENUM: PixelFormatEnum = PixelFormatEnum::ARGB8888;
-
-        let sdl2 = sdl2::init().expect("Could not initialize SDL");
-        let mut canvas = sdl2
-            .video()
-            .expect("Could not initialize video")
+        let sdl = sdl2::init().expect("Could not initialize SDL");
+        let video = sdl.video().expect("Could not initialize video");
+        let mut canvas = video
             .window(
                 "Intel 8080 Space Invaders Emulator",
-                DISPLAY_WIDTH * self.options.scale,
-                DISPLAY_HEIGHT * self.options.scale,
+                DISPLAY_WIDTH * options.scale,
+                DISPLAY_HEIGHT * options.scale,
             )
             .position_centered()
             .build()
-            .expect("Could not open window")
+            .expect("Could not initialize window")
             .into_canvas()
             .build()
-            .expect("Could not create canvas");
-
+            .expect("Could not initialize canvas");
         // The logical size is set to the size of the display. It makes it possible to draw single pixels at the correct position and get a scaled display automatically
         canvas
             .set_logical_size(DISPLAY_WIDTH, DISPLAY_HEIGHT)
             .expect("Could not set a logical size for canvas");
         // Support alpha blending
         canvas.set_blend_mode(BlendMode::Blend);
+        let audio = sdl.audio().expect("Could not initialize audio");
 
+        let mut sounds: [SoundState; 10] = [
+            (3, 0, "ufo", None, None, false),  // Ufo movement
+            (3, 1, "shot", None, None, false), // Player shoots
+            (3, 2, "die", None, None, false),  // Player dies
+            (3, 3, "hit", None, None, false),  // Invader hit
+            (3, 4, "xp", None, None, false),   // Extended play?
+            // (3, 5, "amp"),  // Amp enable, turn on/off all sounds?
+            (5, 0, "fleet1", None, None, false),  // Fleet 1
+            (5, 1, "fleet2", None, None, false),  // Fleet 2
+            (5, 2, "fleet1", None, None, false),  // Fleet 3
+            (5, 3, "fleet2", None, None, false),  // Fleet 4
+            (5, 4, "ufo_hit", None, None, false), // Fleet 4
+        ];
+
+        let audio_spec = AudioSpecDesired {
+            channels: Some(1),
+            freq: Some(11025),
+            samples: None,
+        };
+
+        for (_, _, w, queue, wav, _) in &mut sounds {
+            *wav = Some(
+                AudioSpecWAV::load_wav(format!("assets/{}.wav", w)).expect("Could not load wav"),
+            );
+            *queue = Some(
+                audio
+                    .open_queue(None, &audio_spec)
+                    .expect("Could not create audio queue"),
+            );
+        }
+
+        let event_pump = sdl.event_pump().expect("Could not initialize event pump");
+        Emu {
+            cpu,
+            options,
+            fps: FPS,
+            freq: FREQ,
+            quit: false,
+            canvas,
+            event_pump,
+            sounds,
+        }
+    }
+
+    pub fn run(&mut self) {
         let pixel_format =
             PixelFormat::try_from(PIXEL_FORMAT_ENUM).expect("Could not convert pixel format enum");
 
@@ -94,7 +142,7 @@ impl Emu {
         let bottom_color = Color::from_u32(&pixel_format, self.options.bottom);
 
         // Create an overlay grid for pixelation effect as a texture
-        let texture_creator = canvas.texture_creator();
+        let texture_creator = self.canvas.texture_creator();
         let mut grid_texture = texture_creator
             .create_texture_target(
                 PIXEL_FORMAT_ENUM,
@@ -109,7 +157,7 @@ impl Emu {
             .expect("Could not create game texture");
         game_texture.set_blend_mode(BlendMode::Blend);
 
-        canvas
+        self.canvas
             .with_texture_canvas(&mut grid_texture, |c| {
                 // Draw horizontal lines
                 let mut grid_color = background_color;
@@ -142,69 +190,27 @@ impl Emu {
 
         println!(
             "{:?}, default_pixel_format: {:?}, scale: {:?}, logical_size: {:?}, output_size: {:?}, render_target_supported: {:?}",
-            canvas.info(),
-            canvas.default_pixel_format(),
-            canvas.scale(),
-            canvas.logical_size(),
-            canvas.output_size().expect("Could not get output size from canvas"),
-            canvas.render_target_supported()
+            self.canvas.info(),
+            self.canvas.default_pixel_format(),
+            self.canvas.scale(),
+            self.canvas.logical_size(),
+            self.canvas.output_size().expect("Could not get output size from canvas"),
+            self.canvas.render_target_supported()
         );
 
-        let audio_subsystem = sdl2.audio().expect("Could not initialize audio");
-        type SoundState<'a> = (
-            u8,
-            u8,
-            &'a str,
-            Option<AudioQueue<u8>>,
-            Option<AudioSpecWAV>,
-            bool,
-        );
-
-        let mut sounds: [SoundState; 10] = [
-            (3, 0, "ufo", None, None, false),  // Ufo movement
-            (3, 1, "shot", None, None, false), // Player shoots
-            (3, 2, "die", None, None, false),  // Player dies
-            (3, 3, "hit", None, None, false),  // Invader hit
-            (3, 4, "xp", None, None, false),   // Extended play?
-            // (3, 5, "amp"),  // Amp enable, turn on/off all sounds?
-            (5, 0, "fleet1", None, None, false),  // Fleet 1
-            (5, 1, "fleet2", None, None, false),  // Fleet 2
-            (5, 2, "fleet1", None, None, false),  // Fleet 3
-            (5, 3, "fleet2", None, None, false),  // Fleet 4
-            (5, 4, "ufo_hit", None, None, false), // Fleet 4
-        ];
-
-        let audio_spec = AudioSpecDesired {
-            channels: Some(1),
-            freq: Some(11025),
-            samples: None,
-        };
-
-        for (_, _, w, queue, wav, _) in &mut sounds {
-            *wav = Some(
-                AudioSpecWAV::load_wav(format!("assets/{}.wav", w)).expect("Could not load wav"),
-            );
-            *queue = Some(
-                audio_subsystem
-                    .open_queue(None, &audio_spec)
-                    .expect("Could not create audio queue"),
-            );
-        }
-
-        let mut events = sdl2.event_pump().expect("Could not get event pump");
         let cycles_per_frame = self.freq / self.fps;
 
         while !self.quit {
             let t = Instant::now();
 
             // Handle input/controls
-            self.handle_input(&mut events);
+            self.handle_input();
 
             // Run correct number of cycles, generate interrupts etc
             self.run_cpu(cycles_per_frame);
 
             // Handle sound
-            for (port, bit, _, queue, wav, playing) in &mut sounds {
+            for (port, bit, _, queue, wav, playing) in &mut self.sounds {
                 if get_bit(self.cpu.get_bus_out((*port).into()), *bit) {
                     if !(*playing) {
                         *playing = true;
@@ -220,7 +226,7 @@ impl Emu {
 
             // Handle display
             if self.cpu.get_display_update() {
-                canvas
+                self.canvas
                     .with_texture_canvas(&mut game_texture, |c| {
                         c.set_draw_color(background_color);
                         c.clear();
@@ -245,15 +251,15 @@ impl Emu {
                     })
                     .expect("Could not render game frame");
 
-                canvas
+                self.canvas
                     .copy(&game_texture, None, None)
                     .expect("Could not copy game texture to canvas");
                 // Copy grid texture on top to give a slight pixelated look
-                canvas
+                self.canvas
                     .copy(&grid_texture, None, None)
                     .expect("Could not copy grid texture to canvas");
 
-                canvas.present();
+                self.canvas.present();
 
                 self.cpu.set_display_update(false); // Cpu will set this to true whenever something changes on screen
             }
@@ -282,8 +288,8 @@ impl Emu {
         }
     }
 
-    fn handle_input(&mut self, events: &mut sdl2::EventPump) {
-        for event in events.poll_iter() {
+    fn handle_input(&mut self) {
+        for event in self.event_pump.poll_iter() {
             match event {
                 // Quit
                 Event::Quit { .. }
@@ -295,7 +301,7 @@ impl Emu {
                     scancode: Some(scancode),
                     ..
                 } => {
-                    if let Some((port, bit)) = self.keymap(scancode) {
+                    if let Some((port, bit)) = Self::keymap(scancode) {
                         self.cpu.set_bus_in_bit(port, bit, true);
                     }
                 }
@@ -303,7 +309,7 @@ impl Emu {
                     scancode: Some(scancode),
                     ..
                 } => {
-                    if let Some((port, bit)) = self.keymap(scancode) {
+                    if let Some((port, bit)) = Self::keymap(scancode) {
                         self.cpu.set_bus_in_bit(port, bit, false);
                     }
                 }
@@ -313,7 +319,7 @@ impl Emu {
     }
 
     /// Match MAME controls somewhat
-    fn keymap(&self, scancode: Scancode) -> Option<(usize, u8)> {
+    fn keymap(scancode: Scancode) -> Option<(usize, u8)> {
         match scancode {
             Scancode::T => Some((2, 2)),     // Tilt
             Scancode::Num5 => Some((1, 0)),  // Add Credit
