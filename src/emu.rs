@@ -23,7 +23,7 @@ mod tests;
 #[derive(Debug)]
 pub struct Options {
     /// Scale of the display
-    pub scale: u8,
+    pub scale: u32,
     /// Foreground color
     pub color: u32,
     /// Background color
@@ -68,8 +68,8 @@ impl Emu {
             .expect("Could not initialize video")
             .window(
                 "Intel 8080 Space Invaders Emulator",
-                DISPLAY_WIDTH * self.options.scale as u32,
-                DISPLAY_HEIGHT * self.options.scale as u32,
+                DISPLAY_WIDTH * self.options.scale,
+                DISPLAY_HEIGHT * self.options.scale,
             )
             .position_centered()
             .build()
@@ -95,26 +95,26 @@ impl Emu {
 
         // Create an overlay grid for pixelation effect as a texture
         let texture_creator = canvas.texture_creator();
-        let mut grid = texture_creator
+        let mut grid_texture = texture_creator
             .create_texture_target(
                 PIXEL_FORMAT_ENUM,
-                DISPLAY_WIDTH * self.options.scale as u32,
-                DISPLAY_HEIGHT * self.options.scale as u32,
+                DISPLAY_WIDTH * self.options.scale,
+                DISPLAY_HEIGHT * self.options.scale,
             )
             .expect("Could not create texture");
-        grid.set_blend_mode(BlendMode::Blend);
+        grid_texture.set_blend_mode(BlendMode::Blend);
 
         canvas
-            .with_texture_canvas(&mut grid, |c| {
+            .with_texture_canvas(&mut grid_texture, |c| {
                 // Draw horizontal lines
                 let mut grid_color = background_color;
                 grid_color.a = 0x20;
                 c.set_draw_color(grid_color);
-                for y in 0..(DISPLAY_HEIGHT * self.options.scale as u32) {
-                    if y % (self.options.scale as u32) == 0 {
+                for y in 0..(DISPLAY_HEIGHT * self.options.scale) {
+                    if y % (self.options.scale) == 0 {
                         c.draw_line(
                             (0, y as i32),
-                            ((self.options.scale as u32 * DISPLAY_WIDTH) as i32, y as i32),
+                            ((self.options.scale * DISPLAY_WIDTH) as i32, y as i32),
                         )
                         .expect("Could not draw horizontal lines on texture");
                     }
@@ -123,22 +123,17 @@ impl Emu {
                 // Draw vertical lines
                 grid_color.a = 0x7;
                 c.set_draw_color(grid_color);
-                for x in 0..(DISPLAY_WIDTH * self.options.scale as u32) {
-                    if x % (self.options.scale as u32) == 0 {
+                for x in 0..(DISPLAY_WIDTH * self.options.scale) {
+                    if x % (self.options.scale) == 0 {
                         c.draw_line(
                             (x as i32, 0),
-                            (
-                                x as i32,
-                                (self.options.scale as u32 * DISPLAY_HEIGHT) as i32,
-                            ),
+                            (x as i32, (self.options.scale * DISPLAY_HEIGHT) as i32),
                         )
                         .expect("Could not draw vertical lines on texture");
                     }
                 }
             })
             .expect("Could not draw on texture");
-
-
 
         println!(
             "{:?}, default_pixel_format: {:?}, scale: {:?}, logical_size: {:?}, output_size: {:?}, render_target_supported: {:?}",
@@ -244,7 +239,7 @@ impl Emu {
 
                 // Copy grid texture on top to give a slight pixelated look
                 canvas
-                    .copy(&grid, None, None)
+                    .copy(&grid_texture, None, None)
                     .expect("Could not copy texture to canvas");
 
                 canvas.present();
