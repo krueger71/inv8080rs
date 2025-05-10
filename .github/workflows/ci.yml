@@ -4,7 +4,7 @@ on:
   push:
   pull_request:
 
-env: 
+env:
   CARGO_TERM_COLOR: always
 
 jobs:
@@ -20,7 +20,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: rustup update ${{ matrix.toolchain }} && rustup default ${{ matrix.toolchain }}
-      - run: sudo apt update && sudo apt install libsdl2-dev
+      - run: sudo apt update && sudo apt install libsdl2-dev libsdl3-dev
       - run: cargo build --verbose
       - run: cargo test --verbose
-  
