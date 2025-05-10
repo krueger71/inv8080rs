@@ -4,21 +4,15 @@ version = 4
 
 [[package]]
 name = "bitflags"
-version = "1.3.2"
+version = "2.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bef38d45163c2f1dde094a7dfd33ccf595c92905c8f8f4fdc18d06fb1037718a"
-
-[[package]]
-name = "cfg-if"
-version = "1.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "baf1de4339761588bc0619e3cbc0120ee582ebb74b53b4efbf79117bd2da40fd"
+checksum = "5c8214115b7bf84099f1309324e63141d4c5d7cc26862f97a0a857dbefe165bd"
 
 [[package]]
 name = "inv8080rs"
 version = "0.2.0"
 dependencies = [
- "sdl2",
+ "sdl3",
 ]
 
 [[package]]
@@ -34,30 +28,19 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d750af042f7ef4f724306de029d18836c26c1765a54a6a3f094cbd23a7267ffa"
 
 [[package]]
-name = "sdl2"
-version = "0.37.0"
+name = "sdl3"
+version = "0.14.27"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3b498da7d14d1ad6c839729bd4ad6fc11d90a57583605f3b4df2cd709a9cd380"
+checksum = "e5df6e0341e614731afa18601401dd6921c173b5c22bcf87c56aee30e462622f"
 dependencies = [
  "bitflags",
  "lazy_static",
  "libc",
- "sdl2-sys",
+ "sdl3-sys",
 ]
 
 [[package]]
-name = "sdl2-sys"
-version = "0.37.0"
+name = "sdl3-sys"
+version = "0.5.0+SDL3-3.2.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "951deab27af08ed9c6068b7b0d05a93c91f0a8eb16b6b816a5e73452a43521d3"
-dependencies = [
- "cfg-if",
- "libc",
- "version-compare",
-]
-
-[[package]]
-name = "version-compare"
-version = "0.1.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "579a42fc0b8e0c63b76519a339be31bed574929511fa53c1a3acae26eb258f29"
+checksum = "332d2fcf274e61d96c5e2c72bba37456ac59930c727f13869ddcfe1019109bba"

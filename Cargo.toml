@@ -9,7 +9,7 @@ keywords = ["emulator", "arcade", "8-bit", "intel-8080"]
 edition = "2021"
 
 [dependencies]
-sdl2 = "*"
+sdl3 = "*"
 
 # Some optimizations for dev builds (from Bevvy docs)
 # [profile.dev]
