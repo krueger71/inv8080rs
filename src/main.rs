@@ -8,7 +8,7 @@ fn main() {
     let mut emu = Emu::new(
         Cpu::new(program),
         Options {
-            scale: 3,               // scale width and height by
+            scale: 3, // scale width and height by
             color: 0xffffffff,
             background: 0xff000000,
             top: 0xffff0000,

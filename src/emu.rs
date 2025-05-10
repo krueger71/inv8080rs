@@ -1,20 +1,21 @@
-//! Emulator implementation using SDL2 for I/O
+//! Emulator implementation using SDL3 for I/O
 
 use std::{
     thread::sleep,
     time::{Duration, Instant},
 };
 
-use sdl2::{
-    audio::{AudioQueue, AudioSpecDesired, AudioSpecWAV},
+use sdl3::{
+    audio::{AudioSpec, AudioSpecWAV, AudioStreamOwner},
     event::Event,
     keyboard::{Keycode, Scancode},
-    pixels::{Color, PixelFormat, PixelFormatEnum},
+    pixels::{Color, PixelFormat},
     rect::{Point, Rect},
     render::BlendMode,
+    sys::pixels::{SDL_PixelFormat, SDL_PIXELFORMAT_ARGB8888},
 };
 
-use crate::{cpu::Cpu, utils::get_bit, DISPLAY_HEIGHT, DISPLAY_WIDTH, FPS, FREQ};
+use crate::{cpu::Cpu, DISPLAY_HEIGHT, DISPLAY_WIDTH, FPS, FREQ};
 
 #[cfg(test)]
 mod tests;
@@ -38,7 +39,7 @@ type SoundState<'a> = (
     u8,
     u8,
     &'a str,
-    Option<AudioQueue<u8>>,
+    Option<AudioStreamOwner>,
     Option<AudioSpecWAV>,
     bool,
 );
@@ -55,18 +56,18 @@ pub struct Emu<'a> {
     /// Emulator should quit
     quit: bool,
     /// SDL Canvas<Window>
-    canvas: sdl2::render::Canvas<sdl2::video::Window>,
+    canvas: sdl3::render::Canvas<sdl3::video::Window>,
     /// SDL Event Pump
-    event_pump: sdl2::EventPump,
+    event_pump: sdl3::EventPump,
     /// Sound channels
     sounds: [SoundState<'a>; 10],
 }
 
-const PIXEL_FORMAT_ENUM: PixelFormatEnum = PixelFormatEnum::ARGB8888;
+const PIXEL_FORMAT: SDL_PixelFormat = SDL_PIXELFORMAT_ARGB8888;
 
 impl Emu<'_> {
     pub fn new(cpu: Cpu, options: Options) -> Self {
-        let sdl = sdl2::init().expect("Could not initialize SDL");
+        let sdl = sdl3::init().expect("Could not initialize SDL");
         let video = sdl.video().expect("Could not initialize video");
         let mut canvas = video
             .window(
@@ -77,9 +78,7 @@ impl Emu<'_> {
             .position_centered()
             .build()
             .expect("Could not initialize window")
-            .into_canvas()
-            .build()
-            .expect("Could not initialize canvas");
+            .into_canvas();
 
         // Support alpha blending
         canvas.set_blend_mode(BlendMode::Blend);
@@ -99,22 +98,23 @@ impl Emu<'_> {
             (5, 4, "ufo_hit", None, None, false), // Fleet 4
         ];
 
-        let audio_spec = AudioSpecDesired {
+        let audio_spec = AudioSpec {
             channels: Some(1),
             freq: Some(11025),
-            samples: None,
+            format: Some(sdl3::audio::AudioFormat::U8),
         };
 
-        for (_, _, w, queue, wav, _) in &mut sounds {
-            *wav = Some(
-                AudioSpecWAV::load_wav(format!("assets/{}.wav", w)).expect("Could not load wav"),
-            );
-            *queue = Some(
-                audio
-                    .open_queue(None, &audio_spec)
-                    .expect("Could not create audio queue"),
-            );
-        }
+        let audio_device = audio
+            .open_playback_device(&audio_spec)
+            .expect("Could not open audio device");
+        let stream1 = audio_device.open_device_stream(Some(&audio_spec)).unwrap();
+
+        // for (_, _, w, queue, wav, _) in &mut sounds {
+        //     *wav =Some(
+        //         AudioSpecWAV::load_wav(format!("assets/{}.wav", w)).expect("Could not load wav"));
+        //     let aso = audio_device.open_device_stream(Some(&audio_spec)).unwrap();
+        //     *queue = Some(aso);
+        // }
 
         let event_pump = sdl.event_pump().expect("Could not initialize event pump");
         Emu {
@@ -131,7 +131,7 @@ impl Emu<'_> {
 
     pub fn run(&mut self) {
         let pixel_format =
-            PixelFormat::try_from(PIXEL_FORMAT_ENUM).expect("Could not convert pixel format enum");
+            PixelFormat::try_from(PIXEL_FORMAT).expect("Could not convert pixel format enum");
 
         let background_color = Color::from_u32(&pixel_format, self.options.background);
         let foreground_color = Color::from_u32(&pixel_format, self.options.color);
@@ -142,12 +142,13 @@ impl Emu<'_> {
         let texture_creator = self.canvas.texture_creator();
         let mut grid_texture = texture_creator
             .create_texture_target(
-                PIXEL_FORMAT_ENUM,
+                pixel_format,
                 DISPLAY_WIDTH * self.options.scale,
                 DISPLAY_HEIGHT * self.options.scale,
             )
             .expect("Could not create grid texture");
         grid_texture.set_blend_mode(BlendMode::Blend);
+        grid_texture.set_scale_mode(sdl3::render::ScaleMode::Nearest);
 
         self.canvas
             .with_texture_canvas(&mut grid_texture, |c| {
@@ -181,33 +182,31 @@ impl Emu<'_> {
             .expect("Could not draw on texture");
 
         let mut overlay_texture = texture_creator
-            .create_texture_target(PIXEL_FORMAT_ENUM, DISPLAY_WIDTH, DISPLAY_HEIGHT)
+            .create_texture_target(pixel_format, DISPLAY_WIDTH, DISPLAY_HEIGHT)
             .expect("Could not create game texture");
         overlay_texture.set_blend_mode(BlendMode::Mul);
+        overlay_texture.set_scale_mode(sdl3::render::ScaleMode::Nearest);
 
         self.canvas
-        .with_texture_canvas(&mut overlay_texture, |c| {
-           c.set_draw_color(top_color);
-           c.fill_rect(Rect::new(0, 32, DISPLAY_WIDTH, 32)).expect("Could not fill top rect");
-           c.set_draw_color(bottom_color);
-           c.fill_rect(Rect::new(0, 184, DISPLAY_WIDTH, 56)).expect("Could not fill bottom rect");
-           c.fill_rect(Rect::new(16, 240, 120, 15)).expect("Could not fill remaining ship area");
-        }).expect("Could not draw overlay");
+            .with_texture_canvas(&mut overlay_texture, |c| {
+                c.set_draw_color(top_color);
+                c.fill_rect(Rect::new(0, 32, DISPLAY_WIDTH, 32))
+                    .expect("Could not fill top rect");
+                c.set_draw_color(bottom_color);
+                c.fill_rect(Rect::new(0, 184, DISPLAY_WIDTH, 56))
+                    .expect("Could not fill bottom rect");
+                c.fill_rect(Rect::new(16, 240, 120, 15))
+                    .expect("Could not fill remaining ship area");
+            })
+            .expect("Could not draw overlay");
 
         let mut game_texture = texture_creator
-            .create_texture_target(PIXEL_FORMAT_ENUM, DISPLAY_WIDTH, DISPLAY_HEIGHT)
+            .create_texture_target(pixel_format, DISPLAY_WIDTH, DISPLAY_HEIGHT)
             .expect("Could not create game texture");
         game_texture.set_blend_mode(BlendMode::Blend);
+        game_texture.set_scale_mode(sdl3::render::ScaleMode::Nearest);
 
-        println!(
-            "{:?}, default_pixel_format: {:?}, scale: {:?}, logical_size: {:?}, output_size: {:?}, render_target_supported: {:?}",
-            self.canvas.info(),
-            self.canvas.default_pixel_format(),
-            self.canvas.scale(),
-            self.canvas.logical_size(),
-            self.canvas.output_size().expect("Could not get output size from canvas"),
-            self.canvas.render_target_supported()
-        );
+        println!("{:?}", self.canvas.renderer_name);
 
         let cycles_per_frame = self.freq / self.fps;
 
@@ -221,19 +220,19 @@ impl Emu<'_> {
             self.run_cpu(cycles_per_frame);
 
             // Handle sound
-            for (port, bit, _, queue, wav, playing) in &mut self.sounds {
-                if get_bit(self.cpu.get_bus_out((*port).into()), *bit) {
-                    if !(*playing) {
-                        *playing = true;
-                        let q = queue.as_ref().expect("No audio queue for sound");
-                        let w = wav.as_ref().expect("No audio content for sound");
-                        q.queue_audio(w.buffer()).expect("Could not queue audio");
-                        q.resume();
-                    }
-                } else if *playing {
-                    *playing = false;
-                }
-            }
+            // for (port, bit, _, queue, wav, playing) in &mut self.sounds {
+            //     if get_bit(self.cpu.get_bus_out((*port).into()), *bit) {
+            //         if !(*playing) {
+            //             *playing = true;
+            //             let q = queue.as_ref().expect("No audio queue for sound");
+            //             let w = wav.as_ref().expect("No audio content for sound");
+            //             q.queue_audio(w.buffer()).expect("Could not queue audio");
+            //             q.resume();
+            //         }
+            //     } else if *playing {
+            //         *playing = false;
+            //     }
+            // }
 
             // Handle display
             if self.cpu.get_display_update() {
@@ -242,9 +241,7 @@ impl Emu<'_> {
                         c.set_draw_color(background_color);
                         c.clear();
 
-                        for (color, range) in [
-                            (foreground_color, 0..DISPLAY_HEIGHT)
-                        ] {
+                        for (color, range) in [(foreground_color, 0..DISPLAY_HEIGHT)] {
                             c.set_draw_color(color);
                             for y in range {
                                 for x in 0..DISPLAY_WIDTH {
@@ -333,9 +330,9 @@ impl Emu<'_> {
     fn keymap(scancode: Scancode) -> Option<(usize, u8)> {
         match scancode {
             Scancode::T => Some((2, 2)),     // Tilt
-            Scancode::Num5 => Some((1, 0)),  // Add Credit
-            Scancode::Num1 => Some((1, 2)),  // P1 Start
-            Scancode::Num2 => Some((1, 1)),  // P2 Start
+            Scancode::_5 => Some((1, 0)),    // Add Credit
+            Scancode::_1 => Some((1, 2)),    // P1 Start
+            Scancode::_2 => Some((1, 1)),    // P2 Start
             Scancode::LCtrl => Some((1, 4)), // P1 Fire
             Scancode::Left => Some((1, 5)),  // P1 Left
             Scancode::Right => Some((1, 6)), // P1 Right
