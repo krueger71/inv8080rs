@@ -10,7 +10,7 @@ use sdl2::{
     event::Event,
     keyboard::{Keycode, Scancode},
     pixels::{Color, PixelFormat, PixelFormatEnum},
-    rect::Point,
+    rect::{Point, Rect},
     render::BlendMode,
 };
 
@@ -80,10 +80,7 @@ impl Emu<'_> {
             .into_canvas()
             .build()
             .expect("Could not initialize canvas");
-        // The logical size is set to the size of the display. It makes it possible to draw single pixels at the correct position and get a scaled display automatically
-        canvas
-            .set_logical_size(DISPLAY_WIDTH, DISPLAY_HEIGHT)
-            .expect("Could not set a logical size for canvas");
+
         // Support alpha blending
         canvas.set_blend_mode(BlendMode::Blend);
         let audio = sdl.audio().expect("Could not initialize audio");
@@ -152,11 +149,6 @@ impl Emu<'_> {
             .expect("Could not create grid texture");
         grid_texture.set_blend_mode(BlendMode::Blend);
 
-        let mut game_texture = texture_creator
-            .create_texture_target(PIXEL_FORMAT_ENUM, DISPLAY_WIDTH, DISPLAY_HEIGHT)
-            .expect("Could not create game texture");
-        game_texture.set_blend_mode(BlendMode::Blend);
-
         self.canvas
             .with_texture_canvas(&mut grid_texture, |c| {
                 // Draw horizontal lines
@@ -187,6 +179,25 @@ impl Emu<'_> {
                 }
             })
             .expect("Could not draw on texture");
+
+        let mut overlay_texture = texture_creator
+            .create_texture_target(PIXEL_FORMAT_ENUM, DISPLAY_WIDTH, DISPLAY_HEIGHT)
+            .expect("Could not create game texture");
+        overlay_texture.set_blend_mode(BlendMode::Mul);
+
+        self.canvas
+        .with_texture_canvas(&mut overlay_texture, |c| {
+           c.set_draw_color(top_color);
+           c.fill_rect(Rect::new(0, 32, DISPLAY_WIDTH, 32)).expect("Could not fill top rect");
+           c.set_draw_color(bottom_color);
+           c.fill_rect(Rect::new(0, 184, DISPLAY_WIDTH, 56)).expect("Could not fill bottom rect");
+           c.fill_rect(Rect::new(16, 240, 120, 15)).expect("Could not fill remaining ship area");
+        }).expect("Could not draw overlay");
+
+        let mut game_texture = texture_creator
+            .create_texture_target(PIXEL_FORMAT_ENUM, DISPLAY_WIDTH, DISPLAY_HEIGHT)
+            .expect("Could not create game texture");
+        game_texture.set_blend_mode(BlendMode::Blend);
 
         println!(
             "{:?}, default_pixel_format: {:?}, scale: {:?}, logical_size: {:?}, output_size: {:?}, render_target_supported: {:?}",
@@ -232,11 +243,7 @@ impl Emu<'_> {
                         c.clear();
 
                         for (color, range) in [
-                            (foreground_color, 0..32),
-                            (top_color, 32..64),
-                            (foreground_color, 64..184),
-                            (bottom_color, 184..240),
-                            (foreground_color, 240..DISPLAY_HEIGHT),
+                            (foreground_color, 0..DISPLAY_HEIGHT)
                         ] {
                             c.set_draw_color(color);
                             for y in range {
@@ -258,6 +265,10 @@ impl Emu<'_> {
                 self.canvas
                     .copy(&grid_texture, None, None)
                     .expect("Could not copy grid texture to canvas");
+                // Copy overlay texture at last
+                self.canvas
+                    .copy(&overlay_texture, None, None)
+                    .expect("Could not copy overlay texture to canvas");
 
                 self.canvas.present();
 

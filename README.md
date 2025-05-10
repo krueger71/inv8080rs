@@ -8,7 +8,7 @@ Original version that ran on the Taito 8080 hardware.
 
 ## Running the emulator
 
-Clone the repo and build the emulator with `cargo build --release`. 
+Clone the repo and build the emulator with `cargo build --release`.
 
 The game rom cannot be distributed here for copyright reasons. Sound samples are available in the [assets](assets)-folder. Sounds were created at [jsfxr](https://sfxr.me/) with the same copyright as the source code. Sounds could be customized with other samples if filenames and format are kept as-is (8-bit mono 11025Hz).
 
@@ -24,7 +24,7 @@ Sounds and the game rom should be located in a common folder called `assets` as 
 
   Runs the cpu-model in a loop at approximately the original speed (2 MHz) with the original 60 Hz display update. Two interrupts are generated during each frame (one in the middle of execution and one at the end). The execution is single-threaded.
 
-  The framebuffer is a piece of RAM-memory that needs to be rotated 90 degrees ccw before display. This transformation is done on-the-fly in the cpu:s `display`-function. The colored overlay is handled by drawing the display in several passes in different colors. The band at the bottom with remaining ships and score is not exactly as in the arcade game. The remaining ships are white here, not green. A slight retro pixelated effect is applied via alpha-blending of a grid on top of the game scene.
+  The framebuffer is a piece of RAM-memory that needs to be rotated 90 degrees ccw before display. This transformation is done on-the-fly in the cpu:s `display`-function. A slight retro pixelated effect is then applied via alpha-blending of a grid on top of the game scene. Lastly the colored overlay is created by filling bands across screen with blend mode `mul`.
 
   Sound is handled with queues for each individual sample. Each sample is played only once while the corresponding bit is set. The looping feature for the UFO-sound has not been implemented.
 
