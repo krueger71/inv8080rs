@@ -11,11 +11,11 @@ use sdl3::{
     keyboard::{Keycode, Scancode},
     pixels::{Color, PixelFormat},
     rect::{Point, Rect},
-    render::BlendMode,
+    render::{self, BlendMode, ScaleMode},
     sys::pixels::{SDL_PixelFormat, SDL_PIXELFORMAT_ARGB8888},
 };
 
-use crate::{cpu::Cpu, DISPLAY_HEIGHT, DISPLAY_WIDTH, FPS, FREQ};
+use crate::{cpu::Cpu, utils::get_bit, DISPLAY_HEIGHT, DISPLAY_WIDTH, FPS, FREQ};
 
 #[cfg(test)]
 mod tests;
@@ -56,7 +56,7 @@ pub struct Emu<'a> {
     /// Emulator should quit
     quit: bool,
     /// SDL Canvas<Window>
-    canvas: sdl3::render::Canvas<sdl3::video::Window>,
+    canvas: render::Canvas<sdl3::video::Window>,
     /// SDL Event Pump
     event_pump: sdl3::EventPump,
     /// Sound channels
@@ -107,14 +107,17 @@ impl Emu<'_> {
         let audio_device = audio
             .open_playback_device(&audio_spec)
             .expect("Could not open audio device");
-        let stream1 = audio_device.open_device_stream(Some(&audio_spec)).unwrap();
 
-        // for (_, _, w, queue, wav, _) in &mut sounds {
-        //     *wav =Some(
-        //         AudioSpecWAV::load_wav(format!("assets/{}.wav", w)).expect("Could not load wav"));
-        //     let aso = audio_device.open_device_stream(Some(&audio_spec)).unwrap();
-        //     *queue = Some(aso);
-        // }
+        for (_, _, w, queue, wav, _) in &mut sounds {
+            *wav = Some(
+                AudioSpecWAV::load_wav(format!("assets/{}.wav", w)).expect("Could not load wav"),
+            );
+            let aso = audio_device
+                .clone()
+                .open_device_stream(Some(&audio_spec))
+                .unwrap();
+            *queue = Some(aso);
+        }
 
         let event_pump = sdl.event_pump().expect("Could not initialize event pump");
         Emu {
@@ -148,7 +151,7 @@ impl Emu<'_> {
             )
             .expect("Could not create grid texture");
         grid_texture.set_blend_mode(BlendMode::Blend);
-        grid_texture.set_scale_mode(sdl3::render::ScaleMode::Nearest);
+        grid_texture.set_scale_mode(ScaleMode::Nearest);
 
         self.canvas
             .with_texture_canvas(&mut grid_texture, |c| {
@@ -185,7 +188,7 @@ impl Emu<'_> {
             .create_texture_target(pixel_format, DISPLAY_WIDTH, DISPLAY_HEIGHT)
             .expect("Could not create game texture");
         overlay_texture.set_blend_mode(BlendMode::Mul);
-        overlay_texture.set_scale_mode(sdl3::render::ScaleMode::Nearest);
+        overlay_texture.set_scale_mode(ScaleMode::Nearest);
 
         self.canvas
             .with_texture_canvas(&mut overlay_texture, |c| {
@@ -204,7 +207,7 @@ impl Emu<'_> {
             .create_texture_target(pixel_format, DISPLAY_WIDTH, DISPLAY_HEIGHT)
             .expect("Could not create game texture");
         game_texture.set_blend_mode(BlendMode::Blend);
-        game_texture.set_scale_mode(sdl3::render::ScaleMode::Nearest);
+        game_texture.set_scale_mode(ScaleMode::Nearest);
 
         println!("{:?}", self.canvas.renderer_name);
 
@@ -220,19 +223,19 @@ impl Emu<'_> {
             self.run_cpu(cycles_per_frame);
 
             // Handle sound
-            // for (port, bit, _, queue, wav, playing) in &mut self.sounds {
-            //     if get_bit(self.cpu.get_bus_out((*port).into()), *bit) {
-            //         if !(*playing) {
-            //             *playing = true;
-            //             let q = queue.as_ref().expect("No audio queue for sound");
-            //             let w = wav.as_ref().expect("No audio content for sound");
-            //             q.queue_audio(w.buffer()).expect("Could not queue audio");
-            //             q.resume();
-            //         }
-            //     } else if *playing {
-            //         *playing = false;
-            //     }
-            // }
+            for (port, bit, _, queue, wav, playing) in &mut self.sounds {
+                if get_bit(self.cpu.get_bus_out((*port).into()), *bit) {
+                    if !(*playing) {
+                        *playing = true;
+                        let q = queue.as_ref().expect("No audio queue for sound");
+                        let w = wav.as_ref().expect("No audio content for sound");
+                        q.put_data(w.buffer()).expect("Could not queue audio");
+                        q.resume().expect("Could not resume audio");
+                    }
+                } else if *playing {
+                    *playing = false;
+                }
+            }
 
             // Handle display
             if self.cpu.get_display_update() {
