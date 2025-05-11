@@ -20,7 +20,7 @@ Sounds and the game rom should be located in a common folder called `assets` as 
 
   Instructions are modeled as enums, carrying any immediate data. Execution is one big match-statement. Common cpu-operations have their own functions ("micro-code") to avoid duplication.
 
-* [emu.rs](src/emu.rs) SDL2-based I/O (keyboard, graphics, sound).
+* [emu.rs](src/emu.rs) SDL3-based I/O (keyboard, graphics, sound).
 
   Runs the cpu-model in a loop at approximately the original speed (2 MHz) with the original 60 Hz display update. Two interrupts are generated during each frame (one in the middle of execution and one at the end). The execution is single-threaded.
 
@@ -36,9 +36,9 @@ Sounds and the game rom should be located in a common folder called `assets` as 
   * `Left arrow` player 1 left
   * `Right arrow` player 1 right
   * `Left ctrl` player 1 fire
-  * `D` player 1 left
-  * `G` player 1 right
-  * `A` player 1 fire
+  * `D` player 2 left
+  * `G` player 2 right
+  * `A` player 2 fire
   * `T` tilt and game over!
   * `Esc` quit
 
